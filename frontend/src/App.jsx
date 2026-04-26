@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Shield, Plus, Minus, Zap, HeartPulse, Swords, Layers, Trash2, X, ChevronRight } from 'lucide-react';
+import { Shield, Plus, Minus, Zap, HeartPulse, Swords, Layers, Trash2, X, ChevronRight, Play } from 'lucide-react';
 import { createInitialState, getAvailableCards, buildDeckFromList, STARTER_DECKS, generateCPUDeck } from './utils/gameLogic';
 import { getCalculatedCost, applyCardEffects, drawCard as engineDrawCard } from './utils/battleEngine';
 import cardData from './data.json';
@@ -42,6 +42,48 @@ function getCardBackground(singing) {
   return '#EEEEEE';
 }
 
+function StandardCard({ card }) {
+    if (!card) return null;
+    return (
+        <div className="card standard-card" style={{ background: getCardBackground(card.歌唱) }}>
+            <div className="card-header">
+                <span className="card-cost">{card.コスト}</span>
+                <span className="card-name">{card.曲名}</span>
+            </div>
+            <div className="card-sub">
+                <span>{card.歌唱 === '蓮ノ空女学院スクールアイドルクラブ' ? '蓮ノ空' : card.歌唱}</span>
+                <span>{card.センター}</span>
+            </div>
+            <div className="card-body">
+                <div className="card-stats">
+                    {card.パワー && <div className="stat-item power"><Swords size={16}/>{card.パワー}</div>}
+                    {card.シールド && <div className="stat-item shield"><Shield size={16}/>{card.シールド}</div>}
+                    {card.ヒール && <div className="stat-item heal"><HeartPulse size={16}/>{card.ヒール}</div>}
+                    {card.ダメージ && <div className="stat-item damage"><Zap size={16}/>{card.ダメージ}</div>}
+                </div>
+                <div className="card-effects">
+                    {card.効果1 && <div className="effect-text">{card.効果1}</div>}
+                    {card.効果2 && <div className="effect-text">{card.効果2}</div>}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function MiniCard({ card, owner }) {
+    if (!card) return null;
+    return (
+        <div className={`card mini-card ${owner}`} style={{ background: getCardBackground(card.歌唱) }}>
+            <div className="mini-cost">{card.コスト}</div>
+            <div className="mini-name">{card.曲名}</div>
+            <div className="mini-stats">
+                {card.パワー && <Swords size={10}/>}
+                {card.シールド && <Shield size={10}/>}
+                {card.ヒール && <HeartPulse size={10}/>}
+            </div>
+        </div>
+    );
+}
 
 function App() {
   const [screen, setScreen] = useState('title'); // 'title' | 'deckBuilder' | 'battle'
@@ -318,43 +360,47 @@ function App() {
     });
   };
 
+  const processEndTurnEffects = (userState, setlist, ownerStr) => {
+    const effects = userState.buffs.queuedEndTurnEffects || [];
+    if (effects.length === 0) return;
+
+    effects.forEach(eff => {
+      if (eff.isLast) {
+        const lastPlayed = setlist[setlist.length - 1];
+        if (!lastPlayed || lastPlayed.owner !== ownerStr) return;
+      }
+
+      if (eff.type === 'draw_voltage') {
+        for (let i = 0; i < userState.currentVoltage; i++) {
+          engineDrawCard(userState);
+        }
+      } else if (eff.type === 'draw_specific') {
+        const deckIdx = userState.deck.findIndex(c => c.曲名 === eff.name);
+        if (deckIdx !== -1) {
+          const [c] = userState.deck.splice(deckIdx, 1);
+          userState.hand.push(c);
+        }
+      } else if (eff.type === 'heal') {
+        userState.hp = Math.min(userState.maxHp, userState.hp + eff.value);
+      }
+    });
+    // 使用後はクリア
+    userState.buffs.queuedEndTurnEffects = [];
+  };
+
   const endTurnPlayer = () => {
     if (!gameState.isPlayerTurn || gameState.player.hp <= 0 || gameState.enemy.hp <= 0) return;
 
-    // Yup! Yup! Yup! ドロー
-    if (gameState.player.buffs.yupYupYupActive) {
-      setGameState(prev => {
-        const next = { ...prev, player: { ...prev.player, hand: [...prev.player.hand], deck: [...prev.player.deck], discard: [...prev.player.discard] } };
-        for (let i = 0; i < prev.player.currentVoltage; i++) {
-          engineDrawCard(next.player);
-        }
-        return next;
-      });
-    }
-
-    // 「このターンの最後に使用した時、Dream Believersをドローする」チェック
     setGameState(prev => {
-      const lastPlayed = prev.setlist[prev.setlist.length - 1];
-      if (lastPlayed && lastPlayed.owner === 'player' && lastPlayed.card.曲名 === 'Dream Believers') {
-        const deckIdx = prev.player.deck.findIndex(c => c.曲名 === 'Dream Believers');
-        if (deckIdx !== -1) {
-          const newPlayer = {
-            ...prev.player,
-            deck: [...prev.player.deck],
-            hand: [...prev.player.hand]
-          };
-          const [dbCard] = newPlayer.deck.splice(deckIdx, 1);
-          newPlayer.hand.push(dbCard);
-          return { ...prev, player: newPlayer };
-        }
-      }
-      return prev;
+      const next = JSON.parse(JSON.stringify(prev));
+      processEndTurnEffects(next.player, next.setlist, 'player');
+      return next;
     });
 
     startTurn(false);
   };
 
-  // 使えるカードがなくなったら自動ターンエンド（SPも使用済みの場合）
+  // 使えるカードがなくなったら自動ターンエンド
   useEffect(() => {
     if (!gameState) return;
     if (
@@ -394,16 +440,11 @@ function App() {
       const cardToPlay = affordable[Math.floor(Math.random() * affordable.length)];
       playCard(cardToPlay, false);
     } else {
-      // Yup! Yup! Yup! ドロー
-      if (enemy.buffs.yupYupYupActive) {
-        setGameState(prev => {
-          const next = { ...prev, enemy: { ...prev.enemy, hand: [...prev.enemy.hand], deck: [...prev.enemy.deck], discard: [...prev.enemy.discard] } };
-          for (let i = 0; i < prev.enemy.currentVoltage; i++) {
-            engineDrawCard(next.enemy);
-          }
-          return next;
-        });
-      }
+      setGameState(prev => {
+        const next = JSON.parse(JSON.stringify(prev));
+        processEndTurnEffects(next.enemy, next.setlist, 'enemy');
+        return next;
+      });
       startTurn(true);
     }
   };
@@ -602,23 +643,23 @@ function App() {
                     return (
                       <div key={i} className="pool-card" style={{ background: getCardBackground(card.歌唱) }} onClick={() => setSelectedCard(card)}>
                         <div className="pool-card-info">
-                           <span className="pool-card-cost">{card.コスト}</span>
-                           <span className="pool-card-name">{card.曲名}</span>
+                          <span className="pool-card-cost">{card.コスト}</span>
+                          <span className="pool-card-name">{card.曲名}</span>
                         </div>
                         <div className="pool-card-tags">
-                           <span className="pool-card-unit">{card.歌唱 === '蓮ノ空女学院スクールアイドルクラブ' ? '蓮ノ空' : card.歌唱}</span>
-                           <span className="pool-card-center">{card.センター}</span>
+                          <span className="pool-card-unit">{card.歌唱 === '蓮ノ空女学院スクールアイドルクラブ' ? '蓮ノ空' : card.歌唱}</span>
+                          <span className="pool-card-center">{card.センター}</span>
                         </div>
                         <div className="pool-card-stats">
-                           {card.パワー && <span className="stat-power"><Swords size={10}/>{card.パワー}</span>}
-                           {card.シールド && <span className="stat-shield"><Shield size={10}/>{card.シールド}</span>}
-                           {card.ヒール && <span className="stat-heal"><HeartPulse size={10}/>{card.ヒール}</span>}
-                           {card.ダメージ && <span className="stat-damage"><Zap size={10}/>{card.ダメージ}</span>}
+                          {card.パワー && <span className="stat-power"><Swords size={10}/>{card.パワー}</span>}
+                          {card.シールド && <span className="stat-shield"><Shield size={10}/>{card.シールド}</span>}
+                          {card.ヒール && <span className="stat-heal"><HeartPulse size={10}/>{card.ヒール}</span>}
+                          {card.ダメージ && <span className="stat-damage"><Zap size={10}/>{card.ダメージ}</span>}
                         </div>
                         <div className="pool-card-controls">
-                           <button className="pool-btn remove" onClick={(e) => { e.stopPropagation(); removeCardFromDeck(card.曲名); }} disabled={count === 0}><Minus size={14}/></button>
-                           <span className="pool-count">{count}</span>
-                           <button className="pool-btn add" onClick={(e) => { e.stopPropagation(); addCardToDeck(card.曲名); }} disabled={!canAdd}><Plus size={14}/></button>
+                          <button className="pool-btn remove" onClick={(e) => { e.stopPropagation(); removeCardFromDeck(card.曲名); }} disabled={count === 0}><Minus size={14}/></button>
+                          <span className="pool-count">{count}</span>
+                          <button className="pool-btn add" onClick={(e) => { e.stopPropagation(); addCardToDeck(card.曲名); }} disabled={!canAdd}><Plus size={14}/></button>
                         </div>
                       </div>
                     );
@@ -745,6 +786,7 @@ function App() {
           <div className="deck-info" style={{ marginTop: '2px', display: 'flex', gap: '8px', alignItems: 'center' }}>
              <span className="deck-stat"><Layers size={14}/> {gameState.enemy.deck.length}</span>
              <span className="deck-stat" onClick={() => setShowDiscard({ show: true, owner: 'enemy' })}><Trash2 size={14}/> {gameState.enemy.discard.length}</span>
+             <span className="deck-stat" title="Played this turn"><Play size={14}/> {gameState.enemy.buffs.turnCardsPlayed.length}</span>
             {gameState.enemy.shield > 0 && <span className="shield-badge" style={{marginLeft:'auto'}}><Shield size={14}/> {gameState.enemy.shield}</span>}
           </div>
         </div>
@@ -778,6 +820,7 @@ function App() {
           <div className="deck-info" style={{ marginTop: '2px', display: 'flex', gap: '8px', alignItems: 'center' }}>
              <span className="deck-stat"><Layers size={14}/> {gameState.player.deck.length}</span>
              <span className="deck-stat" onClick={() => setShowDiscard({ show: true, owner: 'player' })}><Trash2 size={14}/> {gameState.player.discard.length}</span>
+             <span className="deck-stat" title="Played this turn"><Play size={14}/> {gameState.player.buffs.turnCardsPlayed.length}</span>
             {gameState.player.shield > 0 && <span className="shield-badge" style={{marginLeft:'auto'}}><Shield size={14}/> {gameState.player.shield}</span>}
           </div>
         </div>
@@ -798,152 +841,80 @@ function App() {
           }} disabled={gameState.player.specialUsed || !gameState.isPlayerTurn || !!gameState.turnBanner || gameState.isCoinFlipPhase}>
             SP
           </button>
-          <span style={{fontSize:'0.65rem', color:'#666', textAlign:'center', lineHeight:1.2, maxWidth:'60px'}}>ボルテージ<br/>4回復</span>
+          <div className="btn-special-label">SP恢复</div>
         </div>
         
-        {gameState.isPlayerTurn && !gameState.turnBanner && !gameState.isCoinFlipPhase && (
-           <button className="end-turn-btn" onClick={endTurnPlayer}>END TURN</button>
-        )}
-      </div>
-
-
-
-
-      {/* Card Preview */}
-      {selectedCard && (
-        <div className="card-preview-overlay" onClick={() => setSelectedCard(null)}>
-          <div className="card-preview" style={{ background: getCardBackground(selectedCard.歌唱) }} onClick={e => e.stopPropagation()}>
-            <div className="card-cost" style={{top:'-12px', left:'-12px', width:'44px', height:'44px', fontSize:'1.4rem'}}>{getCalculatedCost(selectedCard, gameState.player, gameState.setlist, true)}</div>
-            <div className="card-title" style={{fontSize:'1.4rem'}}>{selectedCard.曲名}</div>
-            <div className="card-tags" style={{fontSize:'0.85rem'}}>
-              <span>{selectedCard.歌唱}</span>
-              <span>{selectedCard.センター}</span>
-            </div>
-            <div className="card-stats" style={{fontSize:'0.95rem', padding:'8px'}}>
-              {selectedCard.パワー && <span className="stat-item stat-power"><Swords size={16}/>{selectedCard.パワー}</span>}
-              {selectedCard.シールド && <span className="stat-item stat-shield"><Shield size={16}/>{selectedCard.シールド}</span>}
-              {selectedCard.ヒール && <span className="stat-item stat-heal"><HeartPulse size={16}/>{selectedCard.ヒール}</span>}
-              {selectedCard.ダメージ && <span className="stat-item stat-damage"><Zap size={16}/>{selectedCard.ダメージ}</span>}
-            </div>
-            <div className="card-effect" style={{fontSize:'0.95rem', padding:'12px'}}>
-              {selectedCard.効果1 && <div style={{marginBottom:'6px'}}>{selectedCard.効果1}</div>}
-              {selectedCard.効果2 && <div>{selectedCard.効果2}</div>}
-            </div>
-            <div style={{display:'flex', gap:'8px', marginTop:'10px'}}>
-              {gameState.isPlayerTurn && gameState.player.currentVoltage >= getCalculatedCost(selectedCard, gameState.player, gameState.setlist, true) && !gameState.turnBanner && !gameState.isCoinFlipPhase && !gameState.isAnimating && (
-                <button className="preview-play-btn" onClick={() => { playCard(selectedCard, true); setSelectedCard(null); }}>使用する</button>
-              )}
-              <button className="preview-close-btn" onClick={() => setSelectedCard(null)}>閉じる</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Hand Area */}
-      <div className="hand-container">
-        {gameState.player.hand.map((card, i) => {
-          const calcCost = getCalculatedCost(card, gameState.player, gameState.setlist, true);
-          const canPlay = gameState.isPlayerTurn && gameState.player.currentVoltage >= calcCost && !gameState.turnBanner && !gameState.isCoinFlipPhase && !gameState.isAnimating;
-          return (
-            <div 
+        <div className="player-hand-container">
+          {gameState.player.hand.map((card) => {
+            const calculatedCost = getCalculatedCost(card, gameState.player, gameState.setlist, true);
+            const canAfford = gameState.player.currentVoltage >= calculatedCost;
+            return (
+              <div 
                 key={card.id} 
-                className="card" 
-                style={{ 
-                    background: getCardBackground(card.歌唱),
-                    opacity: canPlay ? 1 : 0.4,
-                    cursor: 'pointer',
-                    filter: canPlay ? 'none' : 'grayscale(30%)'
+                className={`card-wrapper ${canAfford && gameState.isPlayerTurn && !gameState.turnBanner ? 'playable' : 'unplayable'}`}
+                onClick={() => {
+                  if (canAfford && gameState.isPlayerTurn && !gameState.isAnimating && !gameState.turnBanner) {
+                    playCard(card, true);
+                  }
                 }}
-                onClick={() => setSelectedCard(card)}
-            >
-              <div className="card-cost">{calcCost}</div>
-              <div className="card-title">{card.曲名}</div>
-              <div className="card-tags">
-                <span>{card.歌唱}</span>
-                <span>{card.センター}</span>
+              >
+                <div className="calculated-cost-badge">{calculatedCost}</div>
+                <StandardCard card={card} />
               </div>
-              <div className="card-stats">
-                {card.パワー && <span className="stat-item stat-power"><Swords size={12}/>{card.パワー}</span>}
-                {card.シールド && <span className="stat-item stat-shield"><Shield size={12}/>{card.シールド}</span>}
-                {card.ヒール && <span className="stat-item stat-heal"><HeartPulse size={12}/>{card.ヒール}</span>}
-                {card.ダメージ && <span className="stat-item stat-damage"><Zap size={12}/>{card.ダメージ}</span>}
-              </div>
-              <div className="card-effect">
-                {card.効果1 && <div style={{marginBottom:'4px'}}>{card.効果1}</div>}
-                {card.効果2 && <div>{card.効果2}</div>}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        <button className="end-turn-btn" onClick={endTurnPlayer} disabled={!gameState.isPlayerTurn || !!gameState.turnBanner || gameState.isCoinFlipPhase}>
+          TURN END
+        </button>
       </div>
 
-      {/* Discard Modal */}
       {showDiscard.show && (
-        <div className="modal-overlay" onClick={() => setShowDiscard({ show: false, owner: null })}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 style={{fontFamily:'Outfit', margin: 0}}>{showDiscard.owner === 'player' ? 'YOUR' : 'CPU'} DISCARD PILE</h2>
-              <button className="modal-close" onClick={() => setShowDiscard({ show: false, owner: null })}><X size={20}/></button>
-            </div>
-            <div className="modal-grid">
-              {gameState[showDiscard.owner].discard.map((card, i) => (
-                <StandardCard key={i} card={card} />
-              ))}
-              {gameState[showDiscard.owner].discard.length === 0 && <div style={{color:'#666'}}>No cards in discard pile.</div>}
-            </div>
+          <div className="discard-overlay" onClick={() => setShowDiscard({ show: false, owner: null })}>
+              <div className="discard-modal" onClick={e => e.stopPropagation()}>
+                  <div className="discard-header">
+                      <h3>{showDiscard.owner === 'player' ? 'あなたの捨札' : '相手の捨札'}</h3>
+                      <button onClick={() => setShowDiscard({ show: false, owner: null })}><X size={20}/></button>
+                  </div>
+                  <div className="discard-list">
+                      {(showDiscard.owner === 'player' ? gameState.player.discard : gameState.enemy.discard).slice().reverse().map((c, i) => (
+                          <div key={i} className="discard-item">
+                              <span className="discard-cost">{c.コスト}</span>
+                              <span className="discard-name">{c.曲名}</span>
+                          </div>
+                      ))}
+                  </div>
+              </div>
           </div>
-        </div>
       )}
 
-      {/* Battle End Overlay */}
       {gameState.battleResult && (
-        <div className="battle-end-overlay">
-          <div className="battle-end-content">
-            <div className="battle-result-text" style={{ color: gameState.battleResult === 'WIN' ? '#FFD700' : gameState.battleResult === 'LOSE' ? '#FF4500' : '#FFFFFF' }}>
-              {gameState.battleResult === 'WIN' ? 'Victory!' : gameState.battleResult === 'LOSE' ? 'Defeat...' : 'Draw'}
-            </div>
-            <div className="battle-end-actions">
-              <button className="end-action-btn btn-rematch" onClick={handleRematch}>もう一度戦う</button>
-              <button className="end-action-btn btn-menu" onClick={() => setScreen('deckBuilder')}>デッキ選択に戻る</button>
-            </div>
+          <div className="result-overlay">
+              <div className={`result-modal ${gameState.battleResult.toLowerCase()}`}>
+                  <h2 className="result-title">{gameState.battleResult === 'WIN' ? 'Victory!' : gameState.battleResult === 'LOSE' ? 'Defeat...' : 'Draw'}</h2>
+                  <div className="result-stats">
+                      <div className="res-stat">
+                        <span>Played:</span>
+                        <span>{gameState.player.buffs.totalCardsPlayedCount || 0} cards</span>
+                      </div>
+                      <div className="res-stat">
+                        <span>Final HP:</span>
+                        <span>{gameState.player.hp}</span>
+                      </div>
+                  </div>
+                  <div className="result-btns">
+                      <button className="res-btn rematch" onClick={handleRematch}>もう一度戦う</button>
+                      <button className="res-btn back" onClick={() => setScreen('deckBuilder')}>デッキ編成へ</button>
+                  </div>
+              </div>
           </div>
-        </div>
       )}
-
     </div>
     );
   }
 
   return null;
 }
-
-const StandardCard = ({ card }) => (
-    <div style={{
-        width: '150px', height: '210px', background: getCardBackground(card.歌唱),
-        border: '1px solid rgba(0,0,0,0.15)', borderRadius: '12px', padding: '0.8rem',
-        display: 'flex', flexDirection: 'column', color: '#1a1a1a', position: 'relative'
-    }}>
-        <div className="card-cost" style={{top:'-5px', left:'-5px', width:'28px', height:'28px', fontSize:'1rem'}}>{card.コスト}</div>
-        <div className="card-title" style={{fontSize: '0.9rem'}}>{card.曲名}</div>
-        <div className="card-stats" style={{fontSize:'0.7rem', padding:'2px', marginTop:'auto', marginBottom:'5px'}}>
-            {card.パワー && <span className="stat-power"><Swords size={10}/>{card.パワー}</span>}
-            {card.シールド && <span className="stat-shield"><Shield size={10}/>{card.シールド}</span>}
-        </div>
-        <div className="card-effect" style={{fontSize: '0.6rem'}}>{card.効果1}</div>
-    </div>
-);
-
-const MiniCard = ({ card, owner }) => (
-  <div style={{
-    width: '120px', height: '170px', background: getCardBackground(card.歌唱),
-    border: `1px solid ${owner === 'player' ? '#0099aa' : '#cc3333'}`, borderRadius: '8px', padding: '8px',
-    color: '#1a1a1a', display: 'flex', flexDirection: 'column'
-  }}>
-    <div style={{fontSize: '0.8rem', fontWeight: 'bold', color: '#1a1a1a'}}>{card.曲名}</div>
-    <div style={{marginTop: '2px', fontSize: '0.6rem', color: '#444'}}>{card.センター}</div>
-    <div style={{marginTop: 'auto', fontSize: '0.7rem', color: '#333'}}>Cost: {card.コスト}</div>
-    <div style={{marginTop: '4px', fontSize: '0.6rem', color: '#555'}}>{card.効果1}</div>
-  </div>
-);
 
 export default App;
