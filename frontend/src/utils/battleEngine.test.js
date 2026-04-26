@@ -1,1 +1,100 @@
-/* eslint-disable */\nimport assert from 'assert';\nimport { applyCardEffects } from './battleEngine.js';\n\nconst mockState = {\n  player: {\n    hp: 10, maxHp: 10, shield: 0, currentVoltage: 5, maxVoltage: 5,\n    hand: [], deck: [], discard: [],\n    buffs: { turnCardsPlayed: [], turnCardsPlayedDetails: [], queuedEndTurnEffects: [] }\n  },\n  enemy: {\n    hp: 10, maxHp: 10, shield: 0, currentVoltage: 5, maxVoltage: 5,\n    hand: [], deck: [], discard: [],\n    buffs: { turnCardsPlayed: [], turnCardsPlayedDetails: [], queuedEndTurnEffects: [] }\n  },\n  setlist: [],\n  isPlayerTurn: true,\n  animations: {}\n};\n\nfunction testNewRules() {\n  console.log(\"\\n--- Testing New Rules (Voltage, HP, Hand) ---\");\n\n  // 1. Voltage Check (should use maxVoltage)\n  const vCard = { 曲名: \"V-Check\", 効果1: \"ボルテージが7以上の時、相手に5ダメージ与える\" };\n  const state1 = JSON.parse(JSON.stringify(mockState));\n  state1.player.maxVoltage = 7;\n  state1.player.currentVoltage = 2; // Current is low\n  const res1 = applyCardEffects(state1, vCard, true);\n  assert(res1.newState.enemy.hp === 5, \"Should trigger because maxVoltage is 7\");\n\n  // 2. HP Check (should use post-damage HP)\n  // Legato: 体力が5以下の時、相手に10ダメージ (自傷3)\n  const legato = { 曲名: \"Legato\", ダメージ: \"3\", 効果1: \"体力が5以下の時、相手に10ダメージ\" };\n  const state2 = JSON.parse(JSON.stringify(mockState));\n  state2.player.hp = 8; // 8 - 3 = 5 -> should trigger\n  const res2 = applyCardEffects(state2, legato, true);\n  assert(res2.newState.enemy.hp === 0, \"Should trigger because post-damage HP is 5\");\n\n  const state2b = JSON.parse(JSON.stringify(mockState));\n  state2b.player.hp = 9; // 9 - 3 = 6 -> should NOT trigger\n  const res2b = applyCardEffects(state2b, legato, true);\n  assert(res2b.newState.enemy.hp === 10, \"Should NOT trigger because post-damage HP is 6\");\n\n  // 3. Hand Size Check (should use pre-use hand size: hand.length + 1)\n  const hCard = { 曲名: \"H-Check\", 効果1: \"手札が4枚以下の時、相手に2ダメージ与える\" };\n  const state3 = JSON.parse(JSON.stringify(mockState));\n  // If current hand is 4, playing this card means pre-use size was 5. Should NOT trigger.\n  state3.player.hand = [{}, {}, {}, {}]; \n  const res3 = applyCardEffects(state3, hCard, true);\n  assert(res3.newState.enemy.hp === 10, \"Should NOT trigger because pre-use size was 5\");\n\n  const state3b = JSON.parse(JSON.stringify(mockState));\n  state3b.player.hand = [{}, {}, {}]; // 3 + 1 = 4. Should trigger.\n  const res3b = applyCardEffects(state3b, hCard, true);\n  assert(res3b.newState.enemy.hp === 8, \"Should trigger because pre-use size was 4\");\n\n  console.log(\"✅ New Timing Rules tests passed!\");\n}\n\nfunction testKokonTozai() {\n  console.log(\"\\n--- Testing Kokon Tozai Scaling ---\");\n  const kokon = { 曲名: \"Kokon\", 効果1: \"このターンに使用したカード枚数×2ダメージ与える\" };\n  const state = JSON.parse(JSON.stringify(mockState));\n  \n  // 1st card\n  state.player.buffs.turnCardsPlayed = [\"Kokon\"]; \n  const res = applyCardEffects(state, kokon, true);\n  assert(res.newState.enemy.hp === 8, \"1st card should do 1*2=2 dmg\");\n\n  // 3rd card\n  const state2 = JSON.parse(JSON.stringify(mockState));\n  state2.player.buffs.turnCardsPlayed = [\"A\", \"B\", \"Kokon\"];\n  const res2 = applyCardEffects(state2, kokon, true);\n  assert(res2.newState.enemy.hp === 4, \"3rd card should do 3*2=6 dmg\");\n  \n  console.log(\"✅ Kokon Tozai scaling tests passed!\");\n}\n\nfunction testDrawSpecificQueued() {\n  console.log(\"\\n--- Testing Queued Draw (Dream Believers) ---\");\n  const dbCard = { 曲名: \"Dream Believers\", 効果1: \"ターン終了時、Dream Believersをドローする\" };\n  const state = JSON.parse(JSON.stringify(mockState));\n  const res = applyCardEffects(state, dbCard, true);\n  \n  assert(res.newState.player.buffs.queuedEndTurnEffects.length === 1, \"Should queue 1 effect\");\n  assert(res.newState.player.buffs.queuedEndTurnEffects[0].cardName === \"Dream Believers\", \"Should queue correct card\");\n  \n  console.log(\"✅ Queued draw tests passed!\");\n}\n\ntry {\n  testNewRules();\n  testKokonTozai();\n  testDrawSpecificQueued();\n  console.log(\"\\n✨ All regression tests passed!\");\n} catch (e) {\n  console.error(\"\\n❌ Test Failed!\");\n  console.error(e);\n  process.exit(1);\n}\n
+/* eslint-disable */
+import assert from 'assert';
+import { applyCardEffects, getCalculatedCost } from './battleEngine.js';
+
+const mockState = {
+  player: {
+    hp: 10, maxHp: 10, shield: 0, currentVoltage: 5, maxVoltage: 5,
+    hand: [], deck: [], discard: [],
+    buffs: { turnCardsPlayed: [], turnCardsPlayedDetails: [], queuedEndTurnEffects: [] }
+  },
+  enemy: {
+    hp: 10, maxHp: 10, shield: 0, currentVoltage: 5, maxVoltage: 5,
+    hand: [], deck: [], discard: [],
+    buffs: { turnCardsPlayed: [], turnCardsPlayedDetails: [], queuedEndTurnEffects: [] }
+  },
+  setlist: [],
+  isPlayerTurn: true,
+  animations: {}
+};
+
+function testNewRules() {
+  console.log("\n--- Testing New Rules (Voltage, HP, Hand) ---");
+
+  // 1. Voltage Check (should use maxVoltage)
+  const vCard = { 曲名: "V-Check", 効果1: "ボルテージが7以上の時、相手に5ダメージ与える" };
+  const state1 = JSON.parse(JSON.stringify(mockState));
+  state1.player.maxVoltage = 7;
+  state1.player.currentVoltage = 2; // Current is low
+  const res1 = applyCardEffects(state1, vCard, true);
+  assert(res1.newState.enemy.hp === 5, "Should trigger because maxVoltage is 7");
+
+  // 2. HP Check (should use post-damage HP)
+  // Legato: 体力が5以下の時、相手に10ダメージ (自傷3)
+  const legato = { 曲名: "Legato", ダメージ: "3", 効果1: "体力が5以下の時、相手に10ダメージ" };
+  const state2 = JSON.parse(JSON.stringify(mockState));
+  state2.player.hp = 8; // 8 - 3 = 5 -> should trigger
+  const res2 = applyCardEffects(state2, legato, true);
+  assert(res2.newState.enemy.hp === 0, "Should trigger because post-damage HP is 5");
+
+  const state2b = JSON.parse(JSON.stringify(mockState));
+  state2b.player.hp = 9; // 9 - 3 = 6 -> should NOT trigger
+  const res2b = applyCardEffects(state2b, legato, true);
+  assert(res2b.newState.enemy.hp === 10, "Should NOT trigger because post-damage HP is 6");
+
+  // 3. Hand Size Check (should use pre-use hand size: hand.length + 1)
+  const hCard = { 曲名: "H-Check", 効果1: "手札が4枚以下の時、相手に2ダメージ与える" };
+  const state3 = JSON.parse(JSON.stringify(mockState));
+  // If current hand is 4, playing this card means pre-use size was 5. Should NOT trigger.
+  state3.player.hand = [{}, {}, {}, {}]; 
+  const res3 = applyCardEffects(state3, hCard, true);
+  assert(res3.newState.enemy.hp === 10, "Should NOT trigger because pre-use size was 5");
+
+  const state3b = JSON.parse(JSON.stringify(mockState));
+  // If current hand is 3, playing this card means pre-use size was 4. Should trigger.
+  state3b.player.hand = [{}, {}, {}];
+  const res3b = applyCardEffects(state3b, hCard, true);
+  assert(res3b.newState.enemy.hp === 8, "Should trigger because pre-use size was 4");
+
+  console.log("✅ New rules verified");
+}
+
+function testKokonTozai() {
+  console.log("\n--- Testing Kokon Tozai ---");
+  const kokon = { 曲名: "ココン東西", 効果1: "このターン中、使用したカードの数だけ相手にダメージを与える" };
+  const state = JSON.parse(JSON.stringify(mockState));
+  state.player.buffs.turnCardsPlayed = ["Card 1", "Card 2"]; // Already played 2
+  
+  const { newState } = applyCardEffects(state, kokon, true);
+  // After playing Kokon, turnCardsPlayed should be 3
+  assert(newState.player.buffs.turnCardsPlayed.length === 3, "Total played should be 3");
+  assert(newState.enemy.hp === 7, "Enemy should take 3 damage (10 - 3)");
+  console.log("✅ Kokon Tozai verified");
+}
+
+function testDrawSpecificQueued() {
+  console.log("\n--- Testing Specific Draw Queued (Dream Believers) ---");
+  const card = { 曲名: "Dream Believers", 効果1: "ターン終了時、「Dream Believers」をドローする" };
+  const state = JSON.parse(JSON.stringify(mockState));
+  const { newState, events } = applyCardEffects(state, card, true);
+  
+  assert(newState.player.buffs.queuedEndTurnEffects.length === 1, "Should queue the effect");
+  assert(newState.player.buffs.queuedEndTurnEffects[0].type === 'draw_specific', "Type should be draw_specific");
+  assert(newState.player.buffs.queuedEndTurnEffects[0].name === 'Dream Believers', "Name should be Dream Believers");
+  
+  // Verify no immediate draw happened
+  const drawEvent = events.find(e => e.type === 'draw');
+  assert(!drawEvent, "Should NOT have drawn immediately");
+  console.log("✅ Specific draw queuing verified");
+}
+
+try {
+  testNewRules();
+  testKokonTozai();
+  testDrawSpecificQueued();
+  console.log("\n✨ All regression tests passed!");
+} catch (e) {
+  console.error("\n❌ Test Failed!");
+  console.error(e);
+  process.exit(1);
+}
