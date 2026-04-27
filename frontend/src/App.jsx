@@ -6,13 +6,10 @@ import { getCalculatedCost, applyCardEffects, drawCard as engineDrawCard } from 
 import cardData from './data.json';
 import './index.css';
 
-// ターン表.csv準拠: グローバルターン番号(1-indexed)でボルテージとドローを管理
 const VOLTAGE_FIRST = [0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
 const VOLTAGE_SECOND = [0,2,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
-// 先攻ドロー: 奇数ターン(1,3,5,...)で1枚、偶数ターンで0
-// 後攻ドロー: 偶数ターン(2,4,6,...)で1枚、奇数ターンで0
-const DRAW_FIRST = (turn) => (turn % 2 === 1) ? 1 : 0;  // 先攻は奇数ターンにドロー
-const DRAW_SECOND = (turn) => (turn % 2 === 0) ? 1 : 0; // 後攻は偶数ターンにドロー
+const DRAW_FIRST = (turn) => (turn % 2 === 1) ? 1 : 0;
+const DRAW_SECOND = (turn) => (turn % 2 === 0) ? 1 : 0;
 
 function getVoltage(isFirstPlayer, globalTurn) {
   const table = isFirstPlayer ? VOLTAGE_FIRST : VOLTAGE_SECOND;
@@ -24,7 +21,6 @@ function getDrawCount(isFirstPlayer, globalTurn) {
   return isFirstPlayer ? DRAW_FIRST(globalTurn) : DRAW_SECOND(globalTurn);
 }
 
-// 歌唱ユニットに基づくカード背景色（不透過）
 function getCardBackground(singing) {
   if (!singing) return '#c8c8c8';
   if (singing.includes('スリーズブーケ') && singing.includes('DOLLCHESTRA') && singing.includes('みらくらぱーく')) {
@@ -39,15 +35,13 @@ function getCardBackground(singing) {
   if (singing.includes('みらくらぱーく')) {
     return '#fff0b3';
   }
-  // 蓮ノ空女学院スクールアイドルクラブ など
   return '#EEEEEE';
 }
 
-
 function App() {
-  const [screen, setScreen] = useState('title'); // 'title' | 'deckBuilder' | 'battle'
+  const [screen, setScreen] = useState('title');
   const [selectedUnit, setSelectedUnit] = useState(null);
-  const [deckList, setDeckList] = useState({}); // { cardName: count }
+  const [deckList, setDeckList] = useState({});
   const [gameState, setGameState] = useState(null);
   const [damageTexts, setDamageTexts] = useState([]);
   const [showDiscard, setShowDiscard] = useState({ show: false, owner: null });
@@ -55,7 +49,6 @@ function App() {
   
   const cpuTurnRef = useRef(null);
 
-  // ===== デッキビルダー用ロジック =====
   const availableCards = selectedUnit ? getAvailableCards(selectedUnit) : [];
   const deckTotal = Object.values(deckList).reduce((s, n) => s + n, 0);
 
@@ -91,7 +84,6 @@ function App() {
 
   const startBattle = () => {
     if (deckTotal !== 30) return;
-    // デッキリストをカード名配列に展開
     const playerCardNames = [];
     Object.entries(deckList).forEach(([name, count]) => {
       for (let i = 0; i < count; i++) playerCardNames.push(name);
@@ -102,8 +94,7 @@ function App() {
     setScreen('battle');
   };
 
-  // マナカーブの計算
-  const manaCurve = [0, 0, 0, 0, 0, 0, 0, 0]; // 0〜6, 7以上
+  const manaCurve = [0, 0, 0, 0, 0, 0, 0, 0];
   Object.entries(deckList).forEach(([name, count]) => {
     const card = cardData.find(c => c.曲名 === name);
     const cost = Math.min(Number(card?.コスト) || 0, 7);
@@ -111,10 +102,6 @@ function App() {
   });
   const maxManaCount = Math.max(1, ...manaCurve);
 
-  // ===== バトル画面 =====
-  // (Hooks must be before any returns - add null guards inside)
-
-  // コイントスフェーズの処理
   useEffect(() => {
     if (!gameState) return;
     if (gameState.isCoinFlipPhase) {
@@ -171,9 +158,8 @@ function App() {
         });
       }, 2000);
     }
-  }, [gameState?.isCoinFlipPhase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gameState?.isCoinFlipPhase]);
 
-  // Turn Start logic Banner Clear
   useEffect(() => {
     if (!gameState) return;
     if (!gameState.isCoinFlipPhase && gameState.turnBanner) {
@@ -181,7 +167,7 @@ function App() {
         setGameState(prev => prev ? { ...prev, turnBanner: null } : prev);
       }, 2000);
     }
-  }, [gameState?.turnBanner, gameState?.isCoinFlipPhase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gameState?.turnBanner, gameState?.isCoinFlipPhase]);
 
   const addDamageText = (x, y, text, color = '#ef4444') => {
     const id = Math.random();
@@ -219,14 +205,9 @@ function App() {
     return true;
   };
 
-  // (discardRandomFromHand removed as it was unused)
-
   const startTurn = (isPlayer) => {
     setGameState(prev => {
-      // グローバルターンを進める
       const nextGlobalTurn = prev.turn + 1;
-
-      // ターン終了時処理 (前ターンのバフリセット)
       const prevTarget = isPlayer ? prev.enemy : prev.player;
       const newPrevTarget = {
         ...prevTarget,
@@ -247,8 +228,6 @@ function App() {
       
       const target = isPlayer ? prev.player : prev.enemy;
       const amIFirstPlayer = target.isFirstPlayer === true;
-      
-      // ターン表.csv準拠: グローバルターン番号でテーブル参照
       const newMax = getVoltage(amIFirstPlayer, nextGlobalTurn);
       const drawCount = getVoltage(amIFirstPlayer, nextGlobalTurn) === 0 ? 0 : getDrawCount(amIFirstPlayer, nextGlobalTurn);
       
@@ -275,7 +254,6 @@ function App() {
         }
       };
 
-      // デバフ: ドロー禁止
       if (newTarget.buffs.cannotDrawNextTurn) {
         newTarget.buffs.cannotDrawNextTurn = false;
         return {
@@ -290,13 +268,11 @@ function App() {
         };
       }
       
-      // デバフ: 前ターンに「次の相手のターン、相手のボルテージが3になる」を使われていたら
       if (newPrevTarget.buffs.setEnemyVoltage3) {
         newTarget.currentVoltage = 3;
         newPrevTarget.buffs.setEnemyVoltage3 = false;
       }
       
-      // テーブルに基づくドロー
       for (let i = 0; i < drawCount; i++) {
         drawCard(newTarget, isPlayer ? 'player' : 'enemy');
       }
@@ -317,7 +293,6 @@ function App() {
   const endTurnPlayer = () => {
     if (!gameState.isPlayerTurn || gameState.player.hp <= 0 || gameState.enemy.hp <= 0) return;
 
-    // Yup! Yup! Yup! ドロー
     if (gameState.player.buffs.yupYupYupActive) {
       setGameState(prev => {
         const next = { ...prev, player: { ...prev.player, hand: [...prev.player.hand], deck: [...prev.player.deck], discard: [...prev.player.discard] } };
@@ -328,7 +303,6 @@ function App() {
       });
     }
 
-    // 「このターンの最後に使用した時、Dream Believersをドローする」チェック
     setGameState(prev => {
       const lastPlayed = prev.setlist[prev.setlist.length - 1];
       if (lastPlayed && lastPlayed.owner === 'player' && lastPlayed.card.曲名 === 'Dream Believers') {
@@ -350,7 +324,6 @@ function App() {
     startTurn(false);
   };
 
-  // 使えるカードがなくなったら自動ターンエンド（SPも使用済みの場合）
   useEffect(() => {
     if (!gameState) return;
     if (
@@ -369,9 +342,8 @@ function App() {
         return () => clearTimeout(t);
       }
     }
-  }, [gameState?.isPlayerTurn, gameState?.player?.currentVoltage, gameState?.player?.hand?.length, gameState?.player?.specialUsed, gameState?.turnBanner, gameState?.isCoinFlipPhase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gameState?.isPlayerTurn, gameState?.player?.currentVoltage, gameState?.player?.hand?.length, gameState?.player?.specialUsed, gameState?.turnBanner, gameState?.isCoinFlipPhase]);
 
-  // Enemy CPU logic
   useEffect(() => {
     if (!gameState) return;
     if (!gameState.isCoinFlipPhase && !gameState.isPlayerTurn && gameState.enemy.hp > 0 && gameState.player.hp > 0 && !gameState.turnBanner) {
@@ -380,7 +352,7 @@ function App() {
       }, 1500);
       return () => clearTimeout(cpuTurnRef.current);
     }
-  }, [gameState?.isPlayerTurn, gameState?.enemy?.currentVoltage, gameState?.turnBanner, gameState?.isCoinFlipPhase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gameState?.isPlayerTurn, gameState?.enemy?.currentVoltage, gameState?.turnBanner, gameState?.isCoinFlipPhase]);
 
   const playEnemyTurn = () => {
     const { enemy } = gameState;
@@ -390,7 +362,6 @@ function App() {
       const cardToPlay = affordable[Math.floor(Math.random() * affordable.length)];
       playCard(cardToPlay, false);
     } else {
-      // Yup! Yup! Yup! ドロー
       if (enemy.buffs.yupYupYupActive) {
         setGameState(prev => {
           const next = { ...prev, enemy: { ...prev.enemy, hand: [...prev.enemy.hand], deck: [...prev.enemy.deck], discard: [...prev.enemy.discard] } };
@@ -414,7 +385,6 @@ function App() {
       };
       const user = isPlayer ? newState.player : newState.enemy;
 
-      // --- コスト計算 ---
       let cost = getCalculatedCost(card, user);
       if (user.currentVoltage < cost) return prev;
       
@@ -436,7 +406,6 @@ function App() {
         
         const { newState, events } = applyCardEffects(prevState, card, isPlayer);
         
-        // UI側の演出（damageText, shake）を処理
         events.forEach(ev => {
           if (ev.type === 'damage') {
             const isTargetPlayer = ev.data.target === 'player';
@@ -461,7 +430,6 @@ function App() {
           }
         });
 
-        // 強制ターン終了の処理
         if (newState.forceTurnEnd) {
           setTimeout(() => {
             if (isPlayer) endTurnPlayer();
@@ -473,7 +441,6 @@ function App() {
         return newState;
       });
       
-      // 勝敗チェック
       setTimeout(() => {
           setGameState(current => {
               if (!current) return current;
@@ -493,7 +460,6 @@ function App() {
 
   const handleRematch = () => {
     if (!gameState) return;
-    // リマッチ: 現在のデッキ構成で初期状態に戻す
     const playerDeck = buildDeckFromList(gameState.player.originalDeckNames);
     const enemyDeck = generateCPUDeck();
     setGameState(createInitialState({ deck: playerDeck, unit: gameState.player.baseUnit }, enemyDeck));
@@ -586,6 +552,16 @@ function App() {
                 {unit}
               </button>
             ))}
+
+            {/* バトル開始ボタンをここに移動 (ヘッダーに収まるようサイズ調整) */}
+            <button
+              className={`battle-start-btn ${deckTotal === 30 ? 'ready' : ''}`}
+              disabled={deckTotal !== 30}
+              onClick={startBattle}
+              style={{ width: 'auto', padding: '0.5rem 1.5rem', marginLeft: 'auto', fontSize: '1rem' }}
+            >
+              バトル開始
+            </button>
           </div>
 
           {selectedUnit && (
@@ -675,13 +651,6 @@ function App() {
                   })}
                   {deckTotal === 0 && <div className="deck-empty">カードを追加してください</div>}
                 </div>
-                <button
-                  className={`battle-start-btn ${deckTotal === 30 ? 'ready' : ''}`}
-                  disabled={deckTotal !== 30}
-                  onClick={startBattle}
-                >
-                  バトル開始
-                </button>
               </div>
             </div>
           )}
