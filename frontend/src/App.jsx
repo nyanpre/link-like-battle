@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect, useRef } from 'react';
-import { Shield, Plus, Minus, Zap, HeartPulse, Swords, Layers, Trash2, X, ChevronRight, Play } from 'lucide-react';
+import { Shield, Plus, Minus, Zap, HeartPulse, Swords, Layers, Trash2, X, ChevronRight, Play, Smartphone, RefreshCw } from 'lucide-react';
 import { createInitialState, getAvailableCards, buildDeckFromList, STARTER_DECKS, generateCPUDeck } from './utils/gameLogic';
 import { getCalculatedCost, applyCardEffects, drawCard as engineDrawCard } from './utils/battleEngine';
 import cardData from './data.json';
@@ -511,7 +511,13 @@ function App() {
   // ===== タイトル画面 =====
   if (screen === 'title') {
     return (
-      <div className="title-screen">
+      <>
+        <div className="orientation-warning">
+          <Smartphone size={64} />
+          <h2 style={{marginTop:'1rem'}}>画面を横向きにしてください</h2>
+          <p>このゲームは横画面専用です</p>
+        </div>
+        <div className="title-screen">
         <div className="title-content">
           <div className="title-logo">
             <span className="title-link">Link!</span>
@@ -524,14 +530,20 @@ function App() {
             <ChevronRight size={24} />
           </button>
         </div>
-      </div>
+      </>
     );
   }
 
   // ===== デッキ作成画面 =====
   if (screen === 'deckBuilder') {
     return (
-      <div className="deck-builder-screen">
+      <>
+        <div className="orientation-warning">
+          <Smartphone size={64} />
+          <h2 style={{marginTop:'1rem'}}>画面を横向きにしてください</h2>
+          <p>このゲームは横画面専用です</p>
+        </div>
+        <div className="deck-builder-screen">
         <div className="deck-builder-sticky-header" style={{position:'sticky', top:0, background:'#fff', zIndex:1000, paddingBottom:'10px', borderBottom:'1px solid #eee'}}>
           <div className="deck-builder-header">
             <button className="back-btn" onClick={() => setScreen('title')}>← タイトルへ</button>
@@ -680,14 +692,23 @@ function App() {
             </div>
           </div>
         )}
+        )}
       </div>
+    </>
     );
   }
 
+  // ===== バトル画面 =====
   if (screen === 'battle') {
     if (!gameState) return null;
     return (
-      <div className="game-container">
+      <>
+        <div className="orientation-warning">
+          <Smartphone size={64} />
+          <h2 style={{marginTop:'1rem'}}>画面を横向きにしてください</h2>
+          <p>このゲームは横画面専用です</p>
+        </div>
+        <div className="game-container">
         {gameState.turnBanner && <div className="turn-banner">{gameState.turnBanner}</div>}
         
         {gameState.enemyPlayedCard && !gameState.turnBanner && (
@@ -804,6 +825,9 @@ function App() {
         )}
       </div>
 
+
+
+
       {/* Card Preview */}
       {selectedCard && (
         <div className="card-preview-overlay" onClick={() => setSelectedCard(null)}>
@@ -845,7 +869,7 @@ function App() {
                 style={{ 
                     background: getCardBackground(card.歌唱),
                     opacity: canPlay ? 1 : 0.4,
-                    cursor: 'pointer', 
+                    cursor: 'pointer',
                     filter: canPlay ? 'none' : 'grayscale(30%)'
                 }}
                 onClick={() => setSelectedCard(card)}
@@ -905,6 +929,7 @@ function App() {
       )}
 
     </div>
+    </>
     );
   }
 
@@ -912,31 +937,26 @@ function App() {
 }
 
 const StandardCard = ({ card }) => (
-    <div style={{
-        width: '150px', height: '210px', background: getCardBackground(card.歌唱),
-        border: '1px solid rgba(0,0,0,0.15)', borderRadius: '12px', padding: '0.8rem',
-        display: 'flex', flexDirection: 'column', color: '#1a1a1a', position: 'relative'
-    }}>
-        <div className="card-cost" style={{top:'-5px', left:'-5px', width:'28px', height:'28px', fontSize:'1rem'}}>{card.コスト}</div>
-        <div className="card-title" style={{fontSize: '0.9rem'}}>{card.曲名}</div>
-        <div className="card-stats" style={{fontSize:'0.7rem', padding:'2px', marginTop:'auto', marginBottom:'5px'}}>
-            {card.パワー && <span className="stat-power"><Swords size={10}/>{card.パワー}</span>}
-            {card.シールド && <span className="stat-shield"><Shield size={10}/>{card.シールド}</span>}
+    <div className="card-standard" style={{ background: getCardBackground(card.歌唱) }}>
+        <div className="card-cost">{card.コスト}</div>
+        <div className="card-title">{card.曲名}</div>
+        <div className="card-stats">
+            {card.パワー && <span className="stat-power"><Swords size={12}/>{card.パワー}</span>}
+            {card.シールド && <span className="stat-shield"><Shield size={12}/>{card.シールド}</span>}
         </div>
-        <div className="card-effect" style={{fontSize: '0.6rem'}}>{card.効果1}</div>
+        <div className="card-effect">{card.効果1}</div>
     </div>
 );
 
 const MiniCard = ({ card, owner }) => (
-  <div style={{
-    width: '120px', height: '170px', background: getCardBackground(card.歌唱),
-    border: `1px solid ${owner === 'player' ? '#0099aa' : '#cc3333'}`, borderRadius: '8px', padding: '8px',
-    color: '#1a1a1a', display: 'flex', flexDirection: 'column'
+  <div className="card-mini" style={{
+    background: getCardBackground(card.歌唱),
+    border: `1px solid ${owner === 'player' ? '#0099aa' : '#cc3333'}`,
   }}>
-    <div style={{fontSize: '0.8rem', fontWeight: 'bold', color: '#1a1a1a'}}>{card.曲名}</div>
-    <div style={{marginTop: '2px', fontSize: '0.6rem', color: '#444'}}>{card.センター}</div>
-    <div style={{marginTop: 'auto', fontSize: '0.7rem', color: '#333'}}>Cost: {card.コスト}</div>
-    <div style={{marginTop: '4px', fontSize: '0.6rem', color: '#555'}}>{card.効果1}</div>
+    <div className="card-mini-title">{card.曲名}</div>
+    <div className="card-mini-center">{card.センター}</div>
+    <div className="card-mini-footer">Cost: {card.コスト}</div>
+    <div className="card-mini-effect">{card.効果1}</div>
   </div>
 );
 
