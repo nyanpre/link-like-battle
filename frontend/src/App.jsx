@@ -219,6 +219,8 @@ function App() {
     return true;
   };
 
+  // (discardRandomFromHand removed as it was unused)
+
   const startTurn = (isPlayer) => {
     setGameState(prev => {
       // グローバルターンを進める
@@ -822,9 +824,6 @@ function App() {
             <button className="end-turn-btn" onClick={endTurnPlayer}>END TURN</button>
         )}
       </div>
-
-
-
 
       {/* Card Preview */}
       {selectedCard && (
