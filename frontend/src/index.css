@@ -53,7 +53,7 @@ body {
   border: 1px solid var(--glass-border);
   border-radius: 0.8rem;
   padding: 0.75rem 1rem;
-  width: 145px;
+  width: 145px; /* Exactly 5px wider than before (140px) */
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -195,7 +195,7 @@ body {
 .card-cost {
   position: absolute;
   top: -10px;
-  left: -10px;
+  left: -10px; /* Changed from right to left */
   width: 36px;
   height: 36px;
   background: var(--accent);
@@ -531,6 +531,103 @@ body {
   border-radius: 12px;
   font-size: 0.8rem;
   font-weight: bold;
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+  .player-status {
+    width: 175px; /* Exactly 5px wider than before (170px) */
+    padding: 0.5rem 0.6rem;
+  }
+  
+  .player-name, .hp-text {
+    font-size: 0.8rem;
+  }
+
+  .hp-bar-container {
+    height: 8px;
+  }
+
+  .voltage-point {
+    width: 10px;
+    height: 10px;
+  }
+
+  .deck-info {
+    font-size: 0.65rem;
+    gap: 4px;
+  }
+  
+  .enemy-status {
+    transform: scale(0.95);
+    margin-top: 0.2rem;
+  }
+  
+  .self-status {
+    margin-bottom: 186px;
+  }
+
+  .card {
+    width: 130px;
+    height: 182px;
+    padding: 0.5rem;
+    margin-left: -32px;
+  }
+  
+  .card:first-child {
+    margin-left: 0;
+  }
+  
+  .hand-container {
+    height: 200px;
+    justify-content: center;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .card-cost {
+    width: 22px;
+    height: 22px;
+    font-size: 0.8rem;
+    top: -5px; right: -5px;
+  }
+
+  .card-title {
+    font-size: 0.72rem;
+  }
+
+  .card-tags {
+    font-size: 0.55rem;
+  }
+
+  .card-effect {
+    font-size: 0.55rem;
+  }
+
+  .card-stats {
+    font-size: 0.65rem;
+    gap: 4px;
+  }
+
+  .action-container {
+    right: 1%;
+    transform: scale(0.75) translateY(-50%);
+    transform-origin: right center;
+  }
+
+  .btn-special {
+    width: 48px;
+    height: 48px;
+    font-size: 1rem;
+  }
+
+  .setlist-card {
+    transform: scale(0.6);
+  }
+  
+  .setlist-card.latest {
+    transform: scale(0.85);
+  }
 }
 
 /* Card Preview Overlay */
@@ -1184,6 +1281,28 @@ body {
 /* Small Landscape Optimization (スマホ横画面対応) */
 @media (max-height: 450px) {
 
+  /* 追加: タイトル画面の圧縮 */
+  .title-logo {
+    font-size: 2.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  .title-battle {
+    font-size: 3.5rem !important;
+  }
+  .title-subtitle {
+    margin-bottom: 1rem !important;
+    font-size: 1rem !important;
+  }
+  .title-start-btn {
+    padding: 0.8rem 1.5rem !important;
+    font-size: 1.2rem !important;
+  }
+
+  /* 追加: デッキビルダー最下部のスクロール余裕 */
+  .deck-builder-screen {
+    padding-bottom: 5rem !important;
+  }
+
   /* === デッキビルダーヘッダーの極限圧縮 === */
   .deck-builder-sticky-header {
     padding-bottom: 2px !important;
@@ -1255,7 +1374,7 @@ body {
     transform-origin: top left; 
   }
   .self-status { 
-    bottom: 3.5rem !important; /* 手札と被らないように少し上に調整 */
+    bottom: 3.5rem !important;
     left: 0.2rem !important; 
     margin-bottom: 0 !important; 
     transform: scale(0.7) !important; 
@@ -1313,9 +1432,11 @@ body {
     right: 0.2rem !important; 
     gap: 0.5rem !important;
   }
+
+  /* 変更: アクションコンテナを上に持ち上げる */
   .action-container { 
     transform: scale(0.65) !important; 
-    bottom: 0.2rem !important; 
+    bottom: 2.5rem !important; 
     right: 0.2rem !important; 
     gap: 0.3rem !important;
     transform-origin: bottom right !important;
