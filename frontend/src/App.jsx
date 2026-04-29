@@ -172,7 +172,7 @@ function App() {
 
   const addDamageText = (x, y, text, color = '#ef4444') => {
     const id = Math.random();
-    const randomX = x + (Math.random() * 20 - 10); // 重なり防止
+    const randomX = x + (Math.random() * 20 - 10); // 被らないように散らす
     setDamageTexts(prev => [...prev, { id, x: randomX, y, text, color }]);
     setTimeout(() => {
       setDamageTexts(prev => prev.filter(dt => dt.id !== id));
@@ -207,7 +207,7 @@ function App() {
     return true;
   };
 
-  // アンコール等の終了時効果処理
+  // アンコール等の終了時効果処理を追加
   const processEndTurnEffects = (target) => {
     if (!target.buffs.queuedEndTurnEffects) return target;
     let newTarget = { ...target, hand: [...target.hand], deck: [...target.deck], discard: [...target.discard] };
@@ -324,10 +324,9 @@ function App() {
     }
 
     setGameState(prev => {
-      // 共通の終了時処理を適用
+      // アンコール等の終了時処理を適用
       const updatedPlayer = processEndTurnEffects(prev.player);
       
-      // 旧Dream Believers処理も維持
       const lastPlayed = prev.setlist[prev.setlist.length - 1];
       if (lastPlayed && lastPlayed.owner === 'player' && lastPlayed.card.曲名 === 'Dream Believers') {
         const deckIdx = updatedPlayer.deck.findIndex(c => c.曲名 === 'Dream Believers');
@@ -396,7 +395,7 @@ function App() {
   };
 
   const playCard = (card, isPlayer) => {
-    if (isPlayer) setPlayerPlayedCard(card); // 自分のカード演出用
+    if (isPlayer) setPlayerPlayedCard(card); // ポップアップ用に追加
     
     setGameState(prev => {
       const newState = {
@@ -597,7 +596,9 @@ function App() {
         </div>
 
         {selectedUnit && (
+
             <div className="deck-builder-body">
+              {/* カードプール */}
               <div className="card-pool">
                 <h3 className="pool-title">カードプール</h3>
                 <div className="pool-list">
@@ -631,8 +632,10 @@ function App() {
                 </div>
               </div>
 
+              {/* 現在のデッキ */}
               <div className="deck-preview">
                 <h3 className="pool-title">デッキ内容 ({deckTotal}/30)</h3>
+                
                 <div className="deck-list">
                   {Object.entries(deckList).sort((a, b) => {
                     const ca = cardData.find(c => c.曲名 === a[0]);
@@ -667,6 +670,7 @@ function App() {
                       </div>
                     );
                   })}
+                  {deckTotal === 0 && <div className="deck-empty">カードを追加してください</div>}
                 </div>
               </div>
             </div>
@@ -697,12 +701,13 @@ function App() {
         <div className="game-container">
         {gameState.turnBanner && <div className="turn-banner">{gameState.turnBanner}</div>}
         
-        {/* 演出ポップアップ */}
         {gameState.enemyPlayedCard && !gameState.turnBanner && (
           <div className="enemy-played-popup">
               <StandardCard card={gameState.enemyPlayedCard} />
           </div>
         )}
+
+        {/* プレイヤーのカード演出用を追加 */}
         {playerPlayedCard && !gameState.turnBanner && (
           <div className="player-played-popup">
               <StandardCard card={playerPlayedCard} />
@@ -739,6 +744,7 @@ function App() {
         </div>
 
         <div className="board-area">
+          {/* Enemy Area */}
           <div className={`player-status enemy-status ${gameState.animations.enemyShake ? 'shake' : ''}`}>
             <div className="player-info">
               <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -750,15 +756,17 @@ function App() {
             <div className="hp-bar-container">
               <div className={`hp-bar ${gameState.enemy.hp <= 10 ? 'danger' : ''}`} style={{ width: `${Math.max(0, (gameState.enemy.hp / gameState.enemy.maxHp) * 100)}%` }}></div>
             </div>
-            <div className="deck-info">
+          <div className="deck-info" style={{ marginTop: '2px', display: 'flex', gap: '8px', alignItems: 'center' }}>
              <span className="deck-stat"><Layers size={14}/> {gameState.enemy.deck.length}</span>
              <span className="deck-stat" onClick={() => setShowDiscard({ show: true, owner: 'enemy' })}><Trash2 size={14}/> {gameState.enemy.discard.length}</span>
-             <span className="deck-stat"><Play size={14}/> {gameState.enemy.buffs.turnCardsPlayed.length}</span>
+             <span className="deck-stat" title="Played this turn"><Play size={14}/> {gameState.enemy.buffs.turnCardsPlayed.length}</span>
             {gameState.enemy.shield > 0 && <span className="shield-badge" style={{marginLeft:'auto'}}><Shield size={14}/> {gameState.enemy.shield}</span>}
-            </div>
           </div>
+        </div>
 
-          <div className="setlist-container">
+        {/* Setlist Area (Center) */}
+        {!gameState.enemyPlayedCard && !playerPlayedCard && (
+            <div className="setlist-container">
             {gameState.setlist.slice(-5).map((log, index, arr) => (
                 <div key={index} className={`setlist-card ${index === arr.length - 1 ? 'latest' : ''}`} style={{
                 transform: `translate(${(index - arr.length + 1) * 30}px, 0) scale(${index === arr.length - 1 ? 1.2 : 0.8 + (index * 0.05)})`,
@@ -767,9 +775,11 @@ function App() {
                 <MiniCard card={log.card} owner={log.owner} />
                 </div>
             ))}
-          </div>
+            </div>
+        )}
 
-          <div className={`player-status self-status ${gameState.animations.playerShake ? 'shake' : ''}`}>
+        {/* Player Area */}
+        <div className={`player-status self-status ${gameState.animations.playerShake ? 'shake' : ''}`}>
            <div className="player-info">
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span className="player-name">YOU</span>
@@ -780,10 +790,10 @@ function App() {
           <div className="hp-bar-container">
             <div className={`hp-bar ${gameState.player.hp <= 10 ? 'danger' : ''}`} style={{ width: `${Math.max(0, (gameState.player.hp / gameState.player.maxHp) * 100)}%` }}></div>
           </div>
-          <div className="deck-info">
+          <div className="deck-info" style={{ marginTop: '2px', display: 'flex', gap: '8px', alignItems: 'center' }}>
              <span className="deck-stat"><Layers size={14}/> {gameState.player.deck.length}</span>
              <span className="deck-stat" onClick={() => setShowDiscard({ show: true, owner: 'player' })}><Trash2 size={14}/> {gameState.player.discard.length}</span>
-             <span className="deck-stat"><Play size={14}/> {gameState.player.buffs.turnCardsPlayed.length}</span>
+             <span className="deck-stat" title="Played this turn"><Play size={14}/> {gameState.player.buffs.turnCardsPlayed.length}</span>
             {gameState.player.shield > 0 && <span className="shield-badge" style={{marginLeft:'auto'}}><Shield size={14}/> {gameState.player.shield}</span>}
           </div>
         </div>
@@ -804,6 +814,7 @@ function App() {
           }} disabled={gameState.player.specialUsed || !gameState.isPlayerTurn || !!gameState.turnBanner || gameState.isCoinFlipPhase}>
             SP
           </button>
+          <span style={{fontSize:'0.6rem', color:'#666', textAlign:'center', lineHeight:1.1, maxWidth:'65px', fontWeight:'700'}}>SPスキル<br/>ボルテージ+4</span>
         </div>
         
         {gameState.isPlayerTurn && !gameState.turnBanner && !gameState.isCoinFlipPhase && (
@@ -811,16 +822,27 @@ function App() {
         )}
       </div>
 
+      {/* Card Preview (文字サイズ拡大) */}
       {selectedCard && (
         <div className="card-preview-overlay" onClick={() => setSelectedCard(null)}>
           <div className="card-preview" style={{ background: getCardBackground(selectedCard.歌唱) }} onClick={e => e.stopPropagation()}>
             <div className="card-cost" style={{top:'-12px', left:'-12px', width:'44px', height:'44px', fontSize:'1.4rem'}}>{getCalculatedCost(selectedCard, gameState.player)}</div>
             <div className="card-title" style={{fontSize:'1.4rem'}}>{selectedCard.曲名}</div>
-            <div className="card-effect" style={{fontSize:'1.1rem', padding:'12px'}}>
+            <div className="card-tags" style={{fontSize:'0.85rem'}}>
+              <span>{selectedCard.歌唱}</span>
+              <span>{selectedCard.センター}</span>
+            </div>
+            <div className="card-stats" style={{fontSize:'1.1rem', padding:'10px'}}>
+              {selectedCard.パワー && <span className="stat-item stat-power"><Swords size={20}/>{selectedCard.パワー}</span>}
+              {selectedCard.シールド && <span className="stat-item stat-shield"><Shield size={20}/>{selectedCard.シールド}</span>}
+              {selectedCard.ヒール && <span className="stat-item stat-heal"><HeartPulse size={20}/>{selectedCard.ヒール}</span>}
+              {selectedCard.ダメージ && <span className="stat-item stat-damage"><Zap size={20}/>{selectedCard.ダメージ}</span>}
+            </div>
+            <div className="card-effect" style={{fontSize:'1.1rem', padding:'12px', lineHeight: '1.4'}}>
               {selectedCard.効果1 && <div style={{marginBottom:'6px'}}>{selectedCard.効果1}</div>}
               {selectedCard.効果2 && <div>{selectedCard.効果2}</div>}
             </div>
-            <div style={{display:'flex', gap:'8px', marginTop:'10px'}}>
+            <div style={{display:'flex', gap:'8px', marginTop:'15px'}}>
               {gameState.isPlayerTurn && gameState.player.currentVoltage >= getCalculatedCost(selectedCard, gameState.player) && !gameState.turnBanner && !gameState.isCoinFlipPhase && !gameState.isAnimating && (
                 <button className="preview-play-btn" onClick={() => { playCard(selectedCard, true); setSelectedCard(null); }}>使用する</button>
               )}
@@ -831,21 +853,40 @@ function App() {
       )}
 
       <div className="hand-container">
-        {gameState.player.hand.map((card) => {
+        {gameState.player.hand.map((card, index) => {
           const calcCost = getCalculatedCost(card, gameState.player);
           const canPlay = gameState.isPlayerTurn && gameState.player.currentVoltage >= calcCost && !gameState.turnBanner && !gameState.isCoinFlipPhase && !gameState.isAnimating;
+          
+          // 手札枚数に応じた重なり具合の動的計算
+          const handCount = gameState.player.hand.length;
+          const dynamicMargin = handCount > 5 ? Math.max(-110, -60 - (handCount - 5) * 12) : -60;
+
           return (
             <div 
                 key={card.id} 
                 className="card" 
                 style={{ 
                     background: getCardBackground(card.歌唱),
-                    opacity: canPlay ? 1 : 0.4
+                    opacity: canPlay ? 1 : 0.4,
+                    marginLeft: index === 0 ? 0 : `${dynamicMargin}px`,
+                    zIndex: index,
+                    cursor: 'pointer',
+                    filter: canPlay ? 'none' : 'grayscale(30%)'
                 }}
                 onClick={() => setSelectedCard(card)}
             >
               <div className="card-cost">{calcCost}</div>
               <div className="card-title">{card.曲名}</div>
+              <div className="card-tags">
+                <span>{card.歌唱}</span>
+                <span>{card.センター}</span>
+              </div>
+              <div className="card-stats">
+                {card.パワー && <span className="stat-item stat-power"><Swords size={12}/>{card.パワー}</span>}
+                {card.シールド && <span className="stat-item stat-shield"><Shield size={12}/>{card.シールド}</span>}
+                {card.ヒール && <span className="stat-item stat-heal"><HeartPulse size={12}/>{card.ヒール}</span>}
+                {card.ダメージ && <span className="stat-item stat-damage"><Zap size={12}/>{card.ダメージ}</span>}
+              </div>
               <div className="card-effect">
                 {card.効果1 && <div style={{marginBottom:'4px'}}>{card.効果1}</div>}
                 {card.効果2 && <div>{card.効果2}</div>}
@@ -855,26 +896,29 @@ function App() {
         })}
       </div>
 
+      {/* Discard Modal */}
       {showDiscard.show && (
         <div className="modal-overlay" onClick={() => setShowDiscard({ show: false, owner: null })}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{showDiscard.owner === 'player' ? 'YOUR' : 'CPU'} DISCARD PILE</h2>
+              <h2 style={{fontFamily:'Outfit', margin: 0}}>{showDiscard.owner === 'player' ? 'YOUR' : 'CPU'} DISCARD PILE</h2>
               <button className="modal-close" onClick={() => setShowDiscard({ show: false, owner: null })}><X size={20}/></button>
             </div>
             <div className="modal-grid">
               {gameState[showDiscard.owner].discard.map((card, i) => (
                 <StandardCard key={i} card={card} />
               ))}
+              {gameState[showDiscard.owner].discard.length === 0 && <div style={{color:'#666'}}>No cards in discard pile.</div>}
             </div>
           </div>
         </div>
       )}
 
+      {/* Battle End Overlay */}
       {gameState.battleResult && (
         <div className="battle-end-overlay">
           <div className="battle-end-content">
-            <div className="battle-result-text">
+            <div className="battle-result-text" style={{ color: gameState.battleResult === 'WIN' ? '#FFD700' : gameState.battleResult === 'LOSE' ? '#FF4500' : '#FFFFFF' }}>
               {gameState.battleResult === 'WIN' ? 'Victory!' : gameState.battleResult === 'LOSE' ? 'Defeat...' : 'Draw'}
             </div>
             <div className="battle-end-actions">
@@ -884,6 +928,7 @@ function App() {
           </div>
         </div>
       )}
+
     </div>
     </>
     );
@@ -896,7 +941,13 @@ const StandardCard = ({ card }) => (
     <div className="card-standard" style={{ background: getCardBackground(card.歌唱) }}>
         <div className="card-cost">{card.コスト}</div>
         <div className="card-title">{card.曲名}</div>
-        <div className="card-effect" style={{fontSize: '0.9rem'}}>{card.効果1}</div>
+        <div className="card-stats">
+            {card.パワー && <span className="stat-power"><Swords size={12}/>{card.パワー}</span>}
+            {card.シールド && <span className="stat-shield"><Shield size={12}/>{card.シールド}</span>}
+            {card.ヒール && <span className="stat-heal"><HeartPulse size={12}/>{card.ヒール}</span>}
+            {card.ダメージ && <span className="stat-damage"><Zap size={12}/>{card.ダメージ}</span>}
+        </div>
+        <div className="card-effect">{card.効果1}</div>
     </div>
 );
 
@@ -906,6 +957,8 @@ const MiniCard = ({ card, owner }) => (
     border: `1px solid ${owner === 'player' ? '#0099aa' : '#cc3333'}`,
   }}>
     <div className="card-mini-title">{card.曲名}</div>
+    <div className="card-mini-center">{card.センター}</div>
+    <div className="card-mini-footer">Cost: {card.コスト}</div>
     <div className="card-mini-effect">{card.効果1}</div>
   </div>
 );
