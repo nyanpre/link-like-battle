@@ -194,19 +194,19 @@ body {
 
 .card-cost {
   position: absolute;
-  top: -10px;
-  left: -10px; /* Changed from right to left */
-  width: 36px;
-  height: 36px;
+  top: -6px;
+  left: -6px;
+  width: 26px;
+  height: 26px;
   background: var(--accent);
-  color: #000;
+  color: #fff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 1.2rem;
+  font-weight: 800;
+  font-size: 0.9rem;
   box-shadow: 0 4px 10px rgba(0,230,255,0.5);
   border: 2px solid white;
 }
@@ -568,7 +568,7 @@ body {
   }
   
   .self-status {
-    margin-bottom: 186px;
+    margin-bottom: 200px;
   }
 
   .card {
@@ -590,10 +590,10 @@ body {
   }
 
   .card-cost {
-    width: 22px;
-    height: 22px;
-    font-size: 0.8rem;
-    top: -5px; right: -5px;
+    width: 20px;
+    height: 20px;
+    font-size: 0.75rem;
+    top: -3px; left: -3px;
   }
 
   .card-title {
@@ -861,14 +861,14 @@ body {
   width: 100vw;
   background: #fcfcfc;
   overflow-y: auto; /* Fix for scroll */
-  padding-bottom: 6rem;
+  padding-bottom: 15rem;
 }
 
 .deck-builder-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 2rem;
+  padding: 0.3rem 1.5rem;
   background: white;
   box-shadow: 0 2px 10px rgba(0,0,0,0.05);
   position: sticky;
@@ -879,22 +879,25 @@ body {
 .back-btn {
   background: none;
   border: none;
-  font-size: 1rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
   cursor: pointer;
   font-weight: 600;
+  padding: 0.3rem 0.6rem;
 }
 
 .deck-builder-title {
   font-family: 'Outfit', sans-serif;
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--secondary);
 }
 
 .deck-counter {
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 0.9rem;
   background: #f0f0f0;
   padding: 0.3rem 1rem;
   border-radius: 20px;
@@ -904,7 +907,7 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.5rem 2rem;
+  padding: 0.3rem 1rem;
   flex-wrap: wrap;
 }
 
@@ -1369,10 +1372,10 @@ body {
   }
 
   .card-cost {
-    width: 24px;
-    height: 24px;
-    font-size: 0.9rem;
-    top: -8px; left: -8px;
+    width: 20px;
+    height: 20px;
+    font-size: 0.75rem;
+    top: -4px; left: -4px;
     box-shadow: 0 2px 5px rgba(0,230,255,0.4);
   }
 
@@ -1420,15 +1423,17 @@ body {
 
   /* Deck Builder Adjustments */
   .deck-builder-sticky-header {
-    padding-bottom: 5px !important;
+    padding-bottom: 2px !important;
   }
   .deck-builder-header {
-    padding: 0.4rem 1rem !important;
+    padding: 0.2rem 0.5rem !important;
   }
-  .deck-builder-title { font-size: 1rem !important; }
-  .unit-select-area, .starter-deck-area { padding: 0.4rem 1rem !important; gap: 0.5rem !important; }
-  .unit-btn { padding: 0.3rem 0.6rem !important; font-size: 0.75rem !important; }
-  .mana-curve { height: 40px !important; }
+  .deck-builder-title { font-size: 0.9rem !important; margin: 0; }
+  .deck-counter { font-size: 0.75rem !important; }
+  .unit-select-area, .starter-deck-area { padding: 0.2rem 0.5rem !important; gap: 0.4rem !important; }
+  .unit-btn { padding: 0.25rem 0.5rem !important; font-size: 0.7rem !important; }
+  .battle-start-btn { padding: 0.3rem 1rem !important; font-size: 0.85rem !important; }
+  .mana-curve { height: 35px !important; }
   .deck-builder-body { gap: 0.8rem !important; padding: 0 1rem !important; }
   .pool-list { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important; }
   .pool-card-name { font-size: 0.6rem !important; }
