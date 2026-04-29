@@ -871,14 +871,14 @@ function App() {
         </div>
       )}
 
-      <div className="hand-container" style={{ maxWidth: 'calc(100vw - 340px)', margin: '0 auto' }}>
+      <div className="hand-container" style={{ maxWidth: 'calc(100vw - 250px)', margin: '0 auto' }}>
         {gameState.player.hand.map((card, idx, arr) => {
           const calcCost = getCalculatedCost(card, gameState.player);
           const canPlay = gameState.isPlayerTurn && gameState.player.currentVoltage >= calcCost && !gameState.turnBanner && !gameState.isCoinFlipPhase && !gameState.isAnimating;
           
           const isMobile = window.innerHeight <= 480;
-          const baseMargin = isMobile ? -20 : -32;
-          const extraOverlap = isMobile ? 12 : 18;
+          const baseMargin = isMobile ? -30 : -32;
+          const extraOverlap = isMobile ? 22 : 18;
           const marginLeft = idx === 0 ? 0 : (arr.length > 5 ? `${baseMargin - (arr.length - 5) * extraOverlap}px` : undefined);
 
           return (
