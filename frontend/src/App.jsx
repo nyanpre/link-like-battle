@@ -547,7 +547,7 @@ function App() {
           <p>このゲームは横画面専用です</p>
         </div>
         <div className="deck-builder-screen">
-        <div className="deck-builder-sticky-header" style={{position:'sticky', top:0, background:'#fff', zIndex:1000, paddingBottom:'10px', borderBottom:'1px solid #eee'}}>
+        <div className="deck-builder-sticky-header" style={{position:'sticky', top:0, background:'#fff', zIndex:1000, paddingBottom:'5px', borderBottom:'1px solid #eee'}}>
           <div className="deck-builder-header">
             <button className="back-btn" onClick={() => setScreen('title')}>← タイトルへ</button>
             <h1 className="deck-builder-title">デッキ作成</h1>
@@ -588,6 +588,14 @@ function App() {
                 {unit}
               </button>
             ))}
+            <button
+              className={`battle-start-btn ${deckTotal === 30 ? 'ready' : ''}`}
+              disabled={deckTotal !== 30}
+              onClick={startBattle}
+              style={{ marginLeft: 'auto', width: 'auto', padding: '0.4rem 1.5rem', fontSize: '1rem' }}
+            >
+              バトル開始
+            </button>
           </div>
 
           {selectedUnit && (
@@ -677,13 +685,6 @@ function App() {
                   })}
                   {deckTotal === 0 && <div className="deck-empty">カードを追加してください</div>}
                 </div>
-                <button
-                  className={`battle-start-btn ${deckTotal === 30 ? 'ready' : ''}`}
-                  disabled={deckTotal !== 30}
-                  onClick={startBattle}
-                >
-                  バトル開始
-                </button>
               </div>
             </div>
           )}
