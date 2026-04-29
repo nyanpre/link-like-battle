@@ -967,24 +967,24 @@ function App() {
         </div>
       )}
 
-      <div className="hand-container" style={{ maxWidth: 'calc(100vw - 200px)', margin: '0 auto', left: '3px', right: '3px' }}>
+      <div className="hand-container" style={{ maxWidth: `${Math.max(200, window.innerWidth - (window.innerHeight <= 480 ? 160 : 220))}px` }}>
         {gameState.player.hand.map((card, idx, arr) => {
           const calcCost = getCalculatedCost(card, gameState.player);
           const canPlay = gameState.isPlayerTurn && gameState.player.currentVoltage >= calcCost && !gameState.turnBanner && !gameState.isCoinFlipPhase && !gameState.isAnimating;
           
           const isMobile = window.innerHeight <= 480;
           const cardWidth = isMobile ? 85 : 130;
-          const containerWidth = window.innerWidth - 200;
-          // カードが全て収まるために必要なマージンを計算（最低でもカード幅の40%は見えるように）
-          const minVisible = cardWidth * 0.4;
+          const actualMaxWidth = Math.max(200, window.innerWidth - (isMobile ? 160 : 220));
+          // カードが全て収まるために必要なマージンを計算（最低でもカード幅の35%は見えるように）
+          const minVisible = cardWidth * 0.35;
           let marginLeft;
           if (idx === 0) {
             marginLeft = 0;
           } else if (arr.length > 1) {
-            const availableWidth = containerWidth - cardWidth; // 最後のカードの幅を確保
+            const availableWidth = actualMaxWidth - cardWidth;
             const neededMargin = availableWidth / (arr.length - 1);
-            const idealMargin = Math.min(neededMargin, cardWidth * 0.65); // 通常は65%まで重ねる
-            const clampedMargin = Math.max(idealMargin, minVisible); // 最低40%は見える
+            const idealMargin = Math.min(neededMargin, cardWidth * 0.7);
+            const clampedMargin = Math.max(idealMargin, minVisible);
             marginLeft = `${-(cardWidth - clampedMargin)}px`;
           }
 
