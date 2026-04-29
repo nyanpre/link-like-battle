@@ -183,12 +183,16 @@ function App() {
     }
   }, [gameState?.turnBanner, gameState?.isCoinFlipPhase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const addDamageText = (x, y, text, color = '#ef4444') => {
+  const addDamageText = (x, y, text, color = '#ef4444', cssClass = 'damage-text') => {
     const id = Math.random();
-    setDamageTexts(prev => [...prev, { id, x, y, text, color }]);
+    setDamageTexts(prev => [...prev, { id, x, y, text, color, cssClass }]);
     setTimeout(() => {
       setDamageTexts(prev => prev.filter(dt => dt.id !== id));
-    }, 1000);
+    }, 1200);
+  };
+
+  const addDrawEffect = (x, y, text) => {
+    addDamageText(x, y, text, '#3b82f6', 'draw-effect-text');
   };
 
   const triggerShake = (target) => {
@@ -329,6 +333,48 @@ function App() {
       });
     }
 
+    // queuedEndTurnEffects を処理（マハラジャンボリー等のターン終了時効果）
+    setGameState(prev => {
+      const queued = prev.player.buffs.queuedEndTurnEffects;
+      if (!queued || queued.length === 0) return prev;
+      
+      const newPlayer = {
+        ...prev.player,
+        deck: [...prev.player.deck],
+        hand: [...prev.player.hand],
+        discard: [...prev.player.discard],
+        buffs: { ...prev.player.buffs, queuedEndTurnEffects: [] }
+      };
+      
+      queued.forEach(effect => {
+        if (effect.type === 'draw_voltage') {
+          for (let i = 0; i < newPlayer.currentVoltage; i++) {
+            engineDrawCard(newPlayer);
+          }
+        } else if (effect.type === 'draw_specific' && effect.name) {
+          // デッキから特定のカードを探してドロー
+          const idx = newPlayer.deck.findIndex(c => c.曲名 === effect.name);
+          if (idx !== -1) {
+            const [found] = newPlayer.deck.splice(idx, 1);
+            if (newPlayer.hand.length >= 8) newPlayer.discard.push(found);
+            else newPlayer.hand.push(found);
+          } else {
+            // デッキになければ捨て札から探す
+            const dIdx = newPlayer.discard.findIndex(c => c.曲名 === effect.name);
+            if (dIdx !== -1) {
+              const [found] = newPlayer.discard.splice(dIdx, 1);
+              if (newPlayer.hand.length >= 8) newPlayer.discard.push(found);
+              else newPlayer.hand.push(found);
+            }
+          }
+        } else if (effect.type === 'heal' && effect.value) {
+          newPlayer.hp = Math.min(newPlayer.maxHp, newPlayer.hp + effect.value);
+        }
+      });
+      
+      return { ...prev, player: newPlayer };
+    });
+
     // 「このターンの最後に使用した時、Dream Believersをドローする」チェック
     setGameState(prev => {
       const lastPlayed = prev.setlist[prev.setlist.length - 1];
@@ -401,6 +447,45 @@ function App() {
           return next;
         });
       }
+      // queuedEndTurnEffects を処理（CPU側）
+      setGameState(prev => {
+        const queued = prev.enemy.buffs.queuedEndTurnEffects;
+        if (!queued || queued.length === 0) return prev;
+        
+        const newEnemy = {
+          ...prev.enemy,
+          deck: [...prev.enemy.deck],
+          hand: [...prev.enemy.hand],
+          discard: [...prev.enemy.discard],
+          buffs: { ...prev.enemy.buffs, queuedEndTurnEffects: [] }
+        };
+        
+        queued.forEach(effect => {
+          if (effect.type === 'draw_voltage') {
+            for (let i = 0; i < newEnemy.currentVoltage; i++) {
+              engineDrawCard(newEnemy);
+            }
+          } else if (effect.type === 'draw_specific' && effect.name) {
+            const idx = newEnemy.deck.findIndex(c => c.曲名 === effect.name);
+            if (idx !== -1) {
+              const [found] = newEnemy.deck.splice(idx, 1);
+              if (newEnemy.hand.length >= 8) newEnemy.discard.push(found);
+              else newEnemy.hand.push(found);
+            } else {
+              const dIdx = newEnemy.discard.findIndex(c => c.曲名 === effect.name);
+              if (dIdx !== -1) {
+                const [found] = newEnemy.discard.splice(dIdx, 1);
+                if (newEnemy.hand.length >= 8) newEnemy.discard.push(found);
+                else newEnemy.hand.push(found);
+              }
+            }
+          } else if (effect.type === 'heal' && effect.value) {
+            newEnemy.hp = Math.min(newEnemy.maxHp, newEnemy.hp + effect.value);
+          }
+        });
+        
+        return { ...prev, enemy: newEnemy };
+      });
       startTurn(true);
     }
   };
@@ -437,31 +522,42 @@ function App() {
         
         const { newState, events } = applyCardEffects(prevState, card, isPlayer);
         
-        // UI側の演出（damageText, shake）を処理
-        events.forEach((ev, index) => {
+        // UI側の演出（damageText, shake）を処理 - 各エフェクトを600ms間隔で、位置をずらして重ならないようにする
+        let effectIndex = 0;
+        events.forEach((ev) => {
+          const delay = effectIndex * 600;
+          const offsetX = 30 + (effectIndex % 3) * 60; // 横方向にずらす
+          const offsetY = (effectIndex % 3) * 40; // 縦方向にもずらす
+          effectIndex++;
           setTimeout(() => {
             if (ev.type === 'damage') {
               const isTargetPlayer = ev.data.target === 'player';
-              addDamageText(50, isTargetPlayer ? window.innerHeight - 200 : 200, `-${ev.data.value}`);
+              const baseY = isTargetPlayer ? window.innerHeight - 200 : 200;
+              addDamageText(offsetX, baseY - offsetY, `-${ev.data.value}`);
               triggerShake(isTargetPlayer ? 'player' : 'enemy');
             }
             if (ev.type === 'damage_self') {
-              addDamageText(50, isPlayer ? window.innerHeight - 200 : 200, `-${ev.data.value}`);
+              const baseY = isPlayer ? window.innerHeight - 200 : 200;
+              addDamageText(offsetX, baseY - offsetY, `-${ev.data.value}`, '#ff6b35');
               triggerShake(isPlayer ? 'player' : 'enemy');
             }
             if (ev.type === 'heal') {
-              addDamageText(50, isPlayer ? window.innerHeight - 200 : 200, `+${ev.data.value}`, '#10b981');
+              const baseY = isPlayer ? window.innerHeight - 200 : 200;
+              addDamageText(offsetX, baseY - offsetY, `+${ev.data.value}`, '#10b981');
             }
             if (ev.type === 'voltage') {
-              addDamageText(50, isPlayer ? window.innerHeight - 200 : 200, `+⚡${ev.data.value}`, '#f59e0b');
+              const baseY = isPlayer ? window.innerHeight - 200 : 200;
+              addDamageText(offsetX, baseY - offsetY, `+⚡${ev.data.value}`, '#f59e0b');
             }
             if (ev.type === 'shield') {
-              addDamageText(50, isPlayer ? window.innerHeight - 200 : 200, `+🛡${ev.data.value}`, '#3b82f6');
+              const baseY = isPlayer ? window.innerHeight - 200 : 200;
+              addDamageText(offsetX, baseY - offsetY, `+🛡${ev.data.value}`, '#3b82f6');
             }
             if (ev.type === 'draw') {
-              addDamageText(50, isPlayer ? window.innerHeight - 200 : 200, `Draw ${ev.data.name || ''}`, '#3b82f6');
+              const baseY = isPlayer ? window.innerHeight / 2 : window.innerHeight / 2 - 60;
+              addDrawEffect(window.innerWidth / 2 - 60, baseY, `🃏 Draw ${ev.data.count || 1}`);
             }
-          }, index * 400); // 400ms間隔でエフェクトを発生させる
+          }, delay);
         });
 
         // 強制ターン終了の処理
@@ -721,7 +817,7 @@ function App() {
         )}
 
         {damageTexts.map(dt => (
-          <div key={dt.id} className="damage-text" style={{ left: `${dt.x}%`, top: `${dt.y}px`, color: dt.color }}>
+          <div key={dt.id} className={dt.cssClass || 'damage-text'} style={{ left: `${dt.x}px`, top: `${dt.y}px`, color: dt.color }}>
             {dt.text}
           </div>
         ))}
@@ -871,15 +967,26 @@ function App() {
         </div>
       )}
 
-      <div className="hand-container" style={{ maxWidth: 'calc(100vw - 250px)', margin: '0 auto' }}>
+      <div className="hand-container" style={{ maxWidth: 'calc(100vw - 200px)', margin: '0 auto', left: '3px', right: '3px' }}>
         {gameState.player.hand.map((card, idx, arr) => {
           const calcCost = getCalculatedCost(card, gameState.player);
           const canPlay = gameState.isPlayerTurn && gameState.player.currentVoltage >= calcCost && !gameState.turnBanner && !gameState.isCoinFlipPhase && !gameState.isAnimating;
           
           const isMobile = window.innerHeight <= 480;
-          const baseMargin = isMobile ? -30 : -32;
-          const extraOverlap = isMobile ? 22 : 18;
-          const marginLeft = idx === 0 ? 0 : (arr.length > 5 ? `${baseMargin - (arr.length - 5) * extraOverlap}px` : undefined);
+          const cardWidth = isMobile ? 85 : 130;
+          const containerWidth = window.innerWidth - 200;
+          // カードが全て収まるために必要なマージンを計算（最低でもカード幅の40%は見えるように）
+          const minVisible = cardWidth * 0.4;
+          let marginLeft;
+          if (idx === 0) {
+            marginLeft = 0;
+          } else if (arr.length > 1) {
+            const availableWidth = containerWidth - cardWidth; // 最後のカードの幅を確保
+            const neededMargin = availableWidth / (arr.length - 1);
+            const idealMargin = Math.min(neededMargin, cardWidth * 0.65); // 通常は65%まで重ねる
+            const clampedMargin = Math.max(idealMargin, minVisible); // 最低40%は見える
+            marginLeft = `${-(cardWidth - clampedMargin)}px`;
+          }
 
           return (
             <div 
