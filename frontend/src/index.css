@@ -1354,10 +1354,9 @@ body {
   }
 
   .hand-container {
-    bottom: 0.2rem;
+    bottom: 5px;
     height: 120px;
-    max-width: 85vw;
-    padding: 0 40px; /* Leave space for status bars */
+    padding: 0 5px;
   }
 
   .card {
