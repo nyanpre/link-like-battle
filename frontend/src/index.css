@@ -53,7 +53,7 @@ body {
   border: 1px solid var(--glass-border);
   border-radius: 0.8rem;
   padding: 0.75rem 1rem;
-  width: 145px; /* Exactly 5px wider than before (140px) */
+  width: 145px;
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -70,7 +70,7 @@ body {
 
 .self-status {
   position: absolute;
-  bottom: 2rem;
+  bottom: 2.5rem; /* 2remから少し上に */
   left: 2rem;
 }
 
@@ -145,11 +145,11 @@ body {
 /* Card Styling */
 .hand-container {
   position: absolute;
-  bottom: 1rem;
+  bottom: 1.5rem; /* 1remから少し上に */
   left: 50%;
   transform: translateX(-50%);
   width: auto;
-  max-width: 60vw;
+  max-width: 80vw; /* 60vwから広げて調整しやすく */
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -164,7 +164,6 @@ body {
 
 .card {
   flex-shrink: 0;
-  margin-left: -60px;
   width: 160px;
   height: 224px;
   background: #d0d0d0;
@@ -181,10 +180,6 @@ body {
   color: #1a1a1a;
 }
 
-.card:first-child {
-  margin-left: 0;
-}
-
 .card:hover {
   transform: translateY(-40px) scale(1.2) rotate(0deg) !important;
   z-index: 500;
@@ -195,7 +190,7 @@ body {
 .card-cost {
   position: absolute;
   top: -10px;
-  left: -10px; /* Changed from right to left */
+  left: -10px;
   width: 36px;
   height: 36px;
   background: var(--accent);
@@ -237,7 +232,7 @@ body {
   display: flex;
   justify-content: center;
   gap: 10px;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem; /* 効果テキストのために少し縮小 */
   background: rgba(255,255,255,0.85);
   border-radius: 8px;
   padding: 5px;
@@ -303,7 +298,7 @@ body {
 .action-container {
   position: absolute;
   right: 2rem;
-  bottom: 2rem;
+  bottom: 2.5rem; /* 2remから少し上に */
   display: flex;
   flex-direction: row;
   align-items: flex-end;
@@ -415,6 +410,7 @@ body {
   cursor: pointer;
 }
 
+/* 演出用ポップアップ */
 .enemy-played-popup, .player-played-popup {
   position: absolute;
   top: 40%;
@@ -564,18 +560,13 @@ body {
   }
   
   .self-status {
-    margin-bottom: 200px; /* 少し上に */
+    margin-bottom: 210px; /* 見切れ防止のためさらに調整 */
   }
 
   .card {
     width: 130px;
     height: 182px;
     padding: 0.5rem;
-    margin-left: -32px;
-  }
-  
-  .card:first-child {
-    margin-left: 0;
   }
   
   .hand-container {
@@ -601,7 +592,7 @@ body {
   }
 
   .card-effect {
-    font-size: 0.55rem;
+    font-size: 0.65rem; /* 小さすぎたので少し大きく */
   }
 
   .card-stats {
@@ -1281,7 +1272,7 @@ body {
 /* Small Landscape Optimization (スマホ横画面対応) */
 @media (max-height: 450px) {
 
-  /* 追加: タイトル画面の圧縮 */
+  /* タイトル画面の圧縮 */
   .title-logo {
     font-size: 2.5rem !important;
     margin-bottom: 0.5rem !important;
@@ -1298,7 +1289,7 @@ body {
     font-size: 1.2rem !important;
   }
 
-  /* 追加: デッキビルダー最下部のスクロール余裕 */
+  /* デッキビルダー最下部のスクロール余裕 */
   .deck-builder-screen {
     padding-bottom: 5rem !important;
   }
@@ -1374,7 +1365,7 @@ body {
     transform-origin: top left; 
   }
   .self-status { 
-    bottom: 4.5rem !important; /* 見切れ防止のため上に修正 */
+    bottom: 4.5rem !important; /* 修正: 手札の上に配置 */
     left: 0.2rem !important; 
     margin-bottom: 0 !important; 
     transform: scale(0.7) !important; 
@@ -1382,7 +1373,7 @@ body {
   }
   
   .hand-container { 
-    bottom: 15px !important; /* 2pxから15pxに修正 */
+    bottom: 5px !important; /* 2pxから調整 */
     height: 110px !important; 
     max-width: 80vw !important;
     padding: 0 20px !important;
@@ -1421,9 +1412,9 @@ body {
     border-radius: 4px !important;
   }
   .card-effect {
-    font-size: 0.6rem !important; /* 拡大 */
+    font-size: 0.5rem !important; /* 0.4remは小さすぎるため拡大 */
     padding: 2px !important;
-    line-height: 1.2 !important; /* 調整 */
+    line-height: 1.1 !important;
     border-radius: 4px !important;
   }
   
@@ -1433,11 +1424,10 @@ body {
     gap: 0.5rem !important;
   }
 
-  /* 変更: アクションコンテナを上に持ち上げる */
   .action-container { 
-    transform: scale(0.7) !important; 
-    bottom: 3.5rem !important; 
-    right: 0.5rem !important; 
+    transform: scale(0.65) !important; 
+    bottom: 3.5rem !important; /* 2.5remから上に持ち上げる */
+    right: 0.2rem !important; 
     gap: 0.3rem !important;
     transform-origin: bottom right !important;
   }
