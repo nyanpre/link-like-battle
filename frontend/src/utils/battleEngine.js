@@ -1,4 +1,3 @@
-
 /**
  * Battle Engine for Link! Like! Battle!
  * Core logic for processing card effects and state updates.
@@ -7,11 +6,11 @@
 export function getCalculatedCost(card, userState) {
   let cost = Number(card.コスト) || 0;
   
-  // Link to the FUTURE: 枚数分小さくなる
+  // Link to the FUTURE: 枚数分小さくなる（修正：2より小さくならない）
   if (card.曲名 === 'Link to the FUTURE') {
     const cardsPlayed = userState.buffs.turnCardsPlayed.length;
     cost -= cardsPlayed;
-    return Math.max(0, cost);
+    return Math.max(2, cost);
   }
 
   // On your mark(102期Ver.): 梢、綴理、慈のコストを2減らす
@@ -104,19 +103,22 @@ export function applyCardEffects(state, card, isPlayer) {
     if (voltageBelowMatch) {
       const threshold = parseInt(voltageBelowMatch[1], 10);
       if (user.maxVoltage > threshold) return;
+
+      // 「以心☆電信」「マハラジャンボリー」等の効果2倍フラグセット
+      if (effectText.includes("このカードの効果を2倍にする")) {
+        user.buffs.doubleThisCard = true;
+      }
     }
 
     const handLimitMatch = effectText.match(/手札が(\d+)枚以下の時/);
     if (handLimitMatch) {
       const limit = parseInt(handLimitMatch[1], 10);
-      // 使用カードも含めた手札枚数
       if ((user.hand.length + 1) > limit) return;
     }
 
     const handAboveMatch = effectText.match(/手札が(\d+)枚以上の時/);
     if (handAboveMatch) {
       const threshold = parseInt(handAboveMatch[1], 10);
-      // 使用カードも含めた手札枚数
       if ((user.hand.length + 1) < threshold) return;
     }
 
@@ -149,11 +151,14 @@ export function applyCardEffects(state, card, isPlayer) {
 
     // --- 即時発動エフェクト ---
     
-    // 古今東西: このターン中、使用したカードの数だけ相手にダメージを与える
+    // 2倍効果適用用の倍率
+    const multiplier = user.buffs.doubleThisCard ? 2 : 1;
+
+    // 古今東西
     if (effectText.includes("使用したカードの数だけ相手にダメージを与える")) {
       const count = user.buffs.turnCardsPlayed.length;
       if (count > 0) {
-        applyDamage(target, count, addEvent, 'kokon_tozai', isPlayer);
+        applyDamage(target, count * multiplier, addEvent, 'kokon_tozai', isPlayer);
       }
     }
 
@@ -167,7 +172,7 @@ export function applyCardEffects(state, card, isPlayer) {
     if (effectText.includes("付与されているシールドの分相手にダメージを与え、シールドを0にする")) {
       const dmg = user.shield;
       if (dmg > 0) {
-        applyDamage(target, dmg, addEvent, 'shield_bash', isPlayer);
+        applyDamage(target, dmg * multiplier, addEvent, 'shield_bash', isPlayer);
         user.shield = 0;
       }
     }
@@ -175,7 +180,7 @@ export function applyCardEffects(state, card, isPlayer) {
     const directDamageMatch = effectText.match(/相手に(\d+)ダメージ/);
     if (directDamageMatch) {
       const amount = parseInt(directDamageMatch[1], 10);
-      applyDamage(target, amount, addEvent, 'direct', isPlayer);
+      applyDamage(target, amount * multiplier, addEvent, 'direct', isPlayer);
     }
 
     if (effectText.includes("このカードを使用した時、ターンエンドする")) {
@@ -185,23 +190,24 @@ export function applyCardEffects(state, card, isPlayer) {
     const voltageRecoverMatch = effectText.match(/ボルテージを(\d+)回復/);
     if (voltageRecoverMatch) {
       const amount = parseInt(voltageRecoverMatch[1], 10);
-      user.currentVoltage = Math.min(user.maxVoltage, user.currentVoltage + amount);
-      addEvent('voltage', { value: amount });
+      user.currentVoltage = Math.min(user.maxVoltage, user.currentVoltage + (amount * multiplier));
+      addEvent('voltage', { value: amount * multiplier });
     }
 
     if (effectText.includes("シールドを3付与する")) {
-      user.shield += 3;
-      addEvent('shield', { value: 3 });
+      user.shield += (3 * multiplier);
+      addEvent('shield', { value: 3 * multiplier });
     }
 
     if (effectText.includes("3ヒールする") && !effectText.includes("最後に使用")) {
-      user.hp = Math.min(user.maxHp, user.hp + 3);
-      addEvent('heal', { value: 3 });
+      user.hp = Math.min(user.maxHp, user.hp + (3 * multiplier));
+      addEvent('heal', { value: 3 * multiplier });
     } else if (effectText.includes("2ヒールする") && !effectText.includes("最初に使用")) {
-      user.hp = Math.min(user.maxHp, user.hp + 2);
-      addEvent('heal', { value: 2 });
+      user.hp = Math.min(user.maxHp, user.hp + (2 * multiplier));
+      addEvent('heal', { value: 2 * multiplier });
     }
 
+    // 捨札からの回収など
     if (effectText.includes("捨札からコスト4以下のカードを使用する") || effectText.includes("捨札からコスト4以下のカードを")) {
       const candidates = user.discard.filter(c => (Number(c.コスト) || 0) <= 4);
       if (candidates.length > 0) {
@@ -237,13 +243,9 @@ export function applyCardEffects(state, card, isPlayer) {
       const targets = user.hand.filter(c => c.歌唱 && c.歌唱.includes("みらくらぱーく"));
       if (targets.length > 0) {
         const picked = targets[Math.floor(Math.random() * targets.length)];
-        picked.costModifier = (picked.costModifier || 0) - 1;
+        picked.costModifier = (picked.costModifier || 0) - (1 * multiplier);
         addEvent('buff', { name: 'cost_down', target: picked.曲名 });
       }
-    }
-
-    if (effectText.includes("ボルテージが4以下の時、このカードの効果を2倍にする")) {
-       user.buffs.doubleThisCard = true;
     }
 
     if (effectText.includes("カードを使用する度にシールドを1付与する")) {
@@ -277,7 +279,7 @@ export function applyCardEffects(state, card, isPlayer) {
       user.buffs.doubleNextEffect = true;
     }
 
-    // ドロー処理 (条件付きドロー以外)
+    // ドロー処理
     if (effectText.includes("カードを2枚引く") && !effectText.includes("ユニットが")) {
       drawCard(user); drawCard(user);
       addEvent('draw', { count: 2 });
@@ -307,8 +309,8 @@ export function applyCardEffects(state, card, isPlayer) {
     
     if (effectText.includes("このターンの最初に使用した時")) {
       if (user.buffs.turnCardsPlayed.length === 1) { 
-        user.hp = Math.min(user.maxHp, user.hp + 2);
-        addEvent('heal', { value: 2, reason: 'opening' });
+        user.hp = Math.min(user.maxHp, user.hp + (2 * multiplier));
+        addEvent('heal', { value: 2 * multiplier, reason: 'opening' });
       }
     }
   };
@@ -329,7 +331,7 @@ export function applyCardEffects(state, card, isPlayer) {
   }
 
   // --- メイン処理開始 ---
-  user.buffs.turnCardsPlayed.push(card.曲名);
+  // 重複カウント防止：turnCardsPlayed.push は App.jsx 側のみで実行するため、ここでは行わない
   user.buffs.totalCardsPlayedCount = (user.buffs.totalCardsPlayedCount || 0) + 1;
   
   if (user.buffs.shieldOnPlayActive) {
@@ -340,12 +342,11 @@ export function applyCardEffects(state, card, isPlayer) {
   if (!user.buffs.turnCardsPlayedDetails) user.buffs.turnCardsPlayedDetails = [];
   user.buffs.turnCardsPlayedDetails.push({ 曲名: card.曲名, 歌唱: card.歌唱 });
 
-  // パッシブ: 梢ドロー
+  // パッシブ効果
   if (user.buffs.kozueDrawActive && card.センター.includes("乙宗 梢")) {
     drawCard(user);
     addEvent('draw', { count: 1, reason: 'kozue' });
   }
-  // パッシブ: さやかダメージ
   if (user.buffs.sayakaDmgActive && (card.センター.includes("村野さやか") || card.センター.includes("村野 さやか"))) {
     applyDamage(target, 3, addEvent, 'sayaka', isPlayer);
   }
@@ -368,17 +369,17 @@ export function applyCardEffects(state, card, isPlayer) {
     }
   }
 
-  // 2. ヒール
+  // 2. テキストエフェクト解析（フラグセット・倍率計算を先に行う）
+  processEffects(card.効果1);
+  processEffects(card.効果2);
+
+  // 3. ヒール（フラグ確定後に計算）
   let heal = Number(card.ヒール) || 0;
   if (user.buffs.doubleThisCard) heal *= 2;
   if (heal > 0) {
     user.hp = Math.min(user.maxHp, user.hp + heal);
     addEvent('heal', { value: heal });
   }
-
-  // 3. テキストエフェクト解析
-  processEffects(card.効果1);
-  processEffects(card.効果2);
 
   // 4. パワー (攻撃)
   let power = Number(card.パワー) || 0;
