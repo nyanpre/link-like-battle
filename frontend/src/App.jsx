@@ -241,6 +241,7 @@ function App() {
             damageReflectionActive: false,
             tookDamageThisTurn: false,
             tookDamageAmount: 0,
+            tookDamageCount: 0,
             turnCardsPlayed: []
         }
       };
@@ -870,10 +871,16 @@ function App() {
         </div>
       )}
 
-      <div className="hand-container">
-        {gameState.player.hand.map((card) => {
+      <div className="hand-container" style={{ maxWidth: 'calc(100vw - 340px)', margin: '0 auto' }}>
+        {gameState.player.hand.map((card, idx, arr) => {
           const calcCost = getCalculatedCost(card, gameState.player);
           const canPlay = gameState.isPlayerTurn && gameState.player.currentVoltage >= calcCost && !gameState.turnBanner && !gameState.isCoinFlipPhase && !gameState.isAnimating;
+          
+          const isMobile = window.innerHeight <= 480;
+          const baseMargin = isMobile ? -20 : -32;
+          const extraOverlap = isMobile ? 12 : 18;
+          const marginLeft = idx === 0 ? 0 : (arr.length > 5 ? `${baseMargin - (arr.length - 5) * extraOverlap}px` : undefined);
+
           return (
             <div 
                 key={card.id} 
@@ -882,7 +889,8 @@ function App() {
                     background: getCardBackground(card.歌唱),
                     opacity: canPlay ? 1 : 0.4,
                     cursor: 'pointer',
-                    filter: canPlay ? 'none' : 'grayscale(30%)'
+                    filter: canPlay ? 'none' : 'grayscale(30%)',
+                    marginLeft: marginLeft
                 }}
                 onClick={() => setSelectedCard(card)}
             >
