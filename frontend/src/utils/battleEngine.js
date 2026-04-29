@@ -363,7 +363,6 @@ export function applyCardEffects(state, card, isPlayer) {
       targetObj.hp -= dmg;
       targetObj.buffs.tookDamageThisTurn = true;
       targetObj.buffs.tookDamageAmount = (targetObj.buffs.tookDamageAmount || 0) + dmg;
-      targetObj.buffs.tookDamageCount = (targetObj.buffs.tookDamageCount || 0) + 1;
     }
     eventAdder('damage', { value, actual: dmg, target: isPlayerAction ? 'enemy' : 'player', type });
   }
