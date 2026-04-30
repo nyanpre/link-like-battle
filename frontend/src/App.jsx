@@ -5,6 +5,8 @@ import { createInitialState, getAvailableCards, buildDeckFromList, STARTER_DECKS
 import { getCalculatedCost, applyCardEffects, drawCard as engineDrawCard } from './utils/battleEngine';
 import cardData from './data.json';
 import './index.css';
+import { createOnlineInitialState } from './utils/gameLogic';
+import { createRoom, joinRoom, watchRoom, updateGameStateToDB, sendActionToHost } from './utils/firebase';
 
 // ターン表.csv準拠: グローバルターン番号(1-indexed)でボルテージとドローを管理
 const VOLTAGE_FIRST = [0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
