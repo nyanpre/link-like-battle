@@ -56,6 +56,7 @@ function App() {
   const [damageTexts, setDamageTexts] = useState([]);
   const [showDiscard, setShowDiscard] = useState({ show: false, owner: null });
   const [selectedCard, setSelectedCard] = useState(null);
+  const [discardSelectMode, setDiscardSelectMode] = useState(null); // { reason: 'dear_my_future', maxCost: 4, callback: fn }
   
   // 通信対戦用ステート
   const [roomId, setRoomId] = useState('');
@@ -172,9 +173,8 @@ function App() {
       Object.entries(deckList).forEach(([name, count]) => {
         for (let i = 0; i < count; i++) playerCardNames.push(name);
       });
-      const playerDeck = buildDeckFromList(playerCardNames);
       
-      const newRoomId = await createRoom({ deck: playerDeck, unit: selectedUnit }, playerName);
+      const newRoomId = await createRoom({ deckNames: playerCardNames, unit: selectedUnit }, playerName);
       setRoomId(newRoomId);
       setIsHost(true);
       setScreen('waitingRoom');
@@ -189,9 +189,8 @@ function App() {
       Object.entries(deckList).forEach(([name, count]) => {
         for (let i = 0; i < count; i++) playerCardNames.push(name);
       });
-      const playerDeck = buildDeckFromList(playerCardNames);
       
-      await joinRoom(id, { deck: playerDeck, unit: selectedUnit }, playerName);
+      await joinRoom(id, { deckNames: playerCardNames, unit: selectedUnit }, playerName);
       setRoomId(id);
       setIsHost(false);
       setScreen('waitingRoom');
@@ -202,10 +201,23 @@ function App() {
 
   const handleHostStartGame = async () => {
     if (!roomData || !roomData.clientDeck) return;
-    const initialState = createOnlineInitialState(roomData.hostDeck, roomData.clientDeck);
+    // Firebaseからのデータはカード名リストなので、ここでデッキを再構築
+    const hostNames = Array.isArray(roomData.hostDeck.deckNames) 
+      ? roomData.hostDeck.deckNames 
+      : Object.values(roomData.hostDeck.deckNames || {});
+    const clientNames = Array.isArray(roomData.clientDeck.deckNames)
+      ? roomData.clientDeck.deckNames
+      : Object.values(roomData.clientDeck.deckNames || {});
+    
+    const hostDeckCards = buildDeckFromList(hostNames);
+    const clientDeckCards = buildDeckFromList(clientNames);
+    
+    const initialState = createOnlineInitialState(
+      { deck: hostDeckCards, unit: roomData.hostDeck.unit },
+      { deck: clientDeckCards, unit: roomData.clientDeck.unit }
+    );
     initialState.player.name = roomData.hostName || 'YOU';
     initialState.enemy.name = roomData.clientName || '相手';
-    // DBを更新することで、両者のwatchRoomが反応して同時にバトル画面へ遷移する
     await startGameInDB(roomId, initialState);
   };
 
@@ -660,6 +672,49 @@ function App() {
               const baseY = isPlayer ? window.innerHeight / 2 : window.innerHeight / 2 - 60;
               addDrawEffect(window.innerWidth / 2 - 60, baseY, `🃏 Draw ${ev.data.count || 1}`);
             }
+            if (ev.type === 'discard_select' && isPlayer) {
+              // Dear my future: 捨て札からカードを選ばせる
+              setShowDiscard({ show: true, owner: 'player' });
+              setDiscardSelectMode({
+                reason: ev.data.reason,
+                maxCost: ev.data.maxCost,
+                callback: (selectedDiscardCard, discardIndex) => {
+                  // 選んだカードの効果を発動
+                  setGameState(prev => {
+                    const newPlayer = {
+                      ...prev.player,
+                      discard: [...prev.player.discard],
+                      hand: [...prev.player.hand],
+                      deck: [...prev.player.deck],
+                      buffs: { ...prev.player.buffs }
+                    };
+                    // 捨て札からカードを取り出す
+                    const realIdx = newPlayer.discard.findIndex(c => c.id === selectedDiscardCard.id);
+                    if (realIdx !== -1) {
+                      const [card] = newPlayer.discard.splice(realIdx, 1);
+                      // カードの効果を適用
+                      const tempState = { ...prev, player: newPlayer };
+                      const { newState: resultState, events: subEvents } = applyCardEffects(tempState, card, true);
+                      // 使用後は捨て札へ
+                      resultState.player.discard.push(card);
+                      // サブエフェクトの演出
+                      subEvents.forEach((subEv, si) => {
+                        setTimeout(() => {
+                          if (subEv.type === 'damage') {
+                            addDamageText(50, subEv.data.target === 'player' ? window.innerHeight - 200 : 200, `-${subEv.data.value}`);
+                            triggerShake(subEv.data.target === 'player' ? 'player' : 'enemy');
+                          }
+                          if (subEv.type === 'heal') addDamageText(50, window.innerHeight - 200, `+${subEv.data.value}`, '#10b981');
+                          if (subEv.type === 'shield') addDamageText(50, window.innerHeight - 200, `+🛡${subEv.data.value}`, '#3b82f6');
+                        }, si * 600);
+                      });
+                      return resultState;
+                    }
+                    return prev;
+                  });
+                }
+              });
+            }
           }, delay);
         });
 
@@ -764,8 +819,8 @@ function App() {
             </div>
           ))}
         </div>
-        <button style={{ marginTop: '2rem', padding: '10px', background: 'none', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }} onClick={() => setScreen('home')}>
-          戻る
+        <button className="back-btn" style={{ marginTop: '1rem' }} onClick={() => setScreen('deckBuilder')}>
+          ← 戻る
         </button>
       </div>
     );
@@ -793,6 +848,14 @@ function App() {
                 : <p style={{ color: '#666' }}>ホストの開始を待っています...</p>
             )}
           </div>
+          <button className="back-btn" style={{ marginTop: '1rem' }} onClick={() => {
+            if (isHost && roomId) deleteRoom(roomId);
+            setRoomId('');
+            setRoomData(null);
+            setScreen('lobby');
+          }}>
+            ← 戻る
+          </button>
         </div>
       </div>
     );
@@ -1224,16 +1287,39 @@ function App() {
 
       {/* Discard Modal */}
       {showDiscard.show && (
-        <div className="modal-overlay" onClick={() => setShowDiscard({ show: false, owner: null })}>
+        <div className="modal-overlay" onClick={() => { setShowDiscard({ show: false, owner: null }); setDiscardSelectMode(null); }}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 style={{fontFamily:'Outfit', margin: 0}}>{showDiscard.owner === 'player' ? 'YOUR' : 'ENEMY'} DISCARD PILE</h2>
-              <button className="modal-close" onClick={() => setShowDiscard({ show: false, owner: null })}><X size={20}/></button>
+              <h2 style={{fontFamily:'Outfit', margin: 0}}>
+                {discardSelectMode 
+                  ? `捨て札からコスト${discardSelectMode.maxCost}以下のカードを選択`
+                  : `${showDiscard.owner === 'player' ? 'YOUR' : 'ENEMY'} DISCARD PILE`
+                }
+              </h2>
+              <button className="modal-close" onClick={() => { setShowDiscard({ show: false, owner: null }); setDiscardSelectMode(null); }}><X size={20}/></button>
             </div>
             <div className="modal-grid">
-              {gameState[showDiscard.owner].discard.map((card, i) => (
-                <StandardCard key={i} card={card} />
-              ))}
+              {gameState[showDiscard.owner].discard.map((card, i) => {
+                const isSelectable = discardSelectMode && Number(card.コスト) <= discardSelectMode.maxCost;
+                return (
+                  <div key={i} style={{ 
+                    cursor: discardSelectMode ? (isSelectable ? 'pointer' : 'not-allowed') : 'pointer',
+                    opacity: discardSelectMode && !isSelectable ? 0.3 : 1,
+                    filter: discardSelectMode && !isSelectable ? 'grayscale(60%)' : 'none',
+                    transition: 'all 0.2s'
+                  }} onClick={() => {
+                    if (discardSelectMode && isSelectable) {
+                      discardSelectMode.callback(card, i);
+                      setShowDiscard({ show: false, owner: null });
+                      setDiscardSelectMode(null);
+                    } else if (!discardSelectMode) {
+                      setSelectedCard(card);
+                    }
+                  }}>
+                    <StandardCard card={card} />
+                  </div>
+                );
+              })}
               {gameState[showDiscard.owner].discard.length === 0 && <div style={{color:'#666'}}>No cards in discard pile.</div>}
             </div>
           </div>
