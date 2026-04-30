@@ -1,12 +1,11 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect, useRef } from 'react';
 import { Shield, Plus, Minus, Zap, HeartPulse, Swords, Layers, Trash2, X, ChevronRight, Play, Smartphone, RefreshCw } from 'lucide-react';
-import { createInitialState, getAvailableCards, buildDeckFromList, STARTER_DECKS, generateCPUDeck } from './utils/gameLogic';
+import { createInitialState, getAvailableCards, buildDeckFromList, STARTER_DECKS, generateCPUDeck, createOnlineInitialState } from './utils/gameLogic';
 import { getCalculatedCost, applyCardEffects, drawCard as engineDrawCard } from './utils/battleEngine';
 import cardData from './data.json';
 import './index.css';
-import { createOnlineInitialState } from './utils/gameLogic';
-import { createRoom, joinRoom, watchRoom, updateGameStateToDB, sendActionToHost } from './utils/firebase';
+import { createRoom, watchRoomsList, joinRoom, setClientReady, startGameInDB, watchRoom, updateGameStateToDB, deleteRoom } from './utils/firebase';
 
 // ターン表.csv準拠: グローバルターン番号(1-indexed)でボルテージとドローを管理
 const VOLTAGE_FIRST = [0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
@@ -47,26 +46,69 @@ function getCardBackground(singing) {
 
 
 function App() {
-  const [screen, setScreen] = useState('title'); // 'title' | 'deckBuilder' | 'battle'
+  const [screen, setScreen] = useState('home'); // 'home' | 'deckBuilder' | 'lobby' | 'waitingRoom' | 'battle'
+  const [playerName, setPlayerName] = useState('');
+  const [gameMode, setGameMode] = useState(null); // 'cpu' | 'online'
+
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [deckList, setDeckList] = useState({}); // { cardName: count }
   const [gameState, setGameState] = useState(null);
   const [damageTexts, setDamageTexts] = useState([]);
   const [showDiscard, setShowDiscard] = useState({ show: false, owner: null });
   const [selectedCard, setSelectedCard] = useState(null);
-  const [onlineMode, setOnlineMode] = useState(false);
-  const [roomId, setRoomId] = useState('');
-  const [inputRoomId, setInputRoomId] = useState('');
-  const [isHost, setIsHost] = useState(false);
-  const [waitingClient, setWaitingClient] = useState(false);
   
-  const cpuTurnRef = useRef(null);
-  const unsubscribeRef = useRef(null);
-  const currentGameStateRef = useRef(null); // ホストがDB更新時に最新のStateを参照するため
+  // 通信対戦用ステート
+  const [roomId, setRoomId] = useState('');
+  const [isHost, setIsHost] = useState(false);
+  const [roomsList, setRoomsList] = useState([]);
+  const [roomData, setRoomData] = useState(null);
 
+  const cpuTurnRef = useRef(null);
+  const unsubscribeRoomRef = useRef(null);
+
+  // ロビーの部屋一覧を監視
   useEffect(() => {
-    currentGameStateRef.current = gameState;
-  }, [gameState]);
+    if (screen === 'lobby') {
+      const unsub = watchRoomsList((rooms) => setRoomsList(rooms));
+      return () => unsub();
+    }
+  }, [screen]);
+
+  // 待機室・バトルの監視（同時遷移の核）
+  useEffect(() => {
+    if (!roomId || (screen !== 'waitingRoom' && screen !== 'battle')) return;
+    
+    unsubscribeRoomRef.current = watchRoom(roomId, (data) => {
+      if (!data) return;
+      setRoomData(data); // 待機室のUI更新用
+
+      // ホストがゲームを開始し、状態が'playing'になったら「両者同時」に画面を切り替える
+      if (data.status === 'playing' && data.gameState) {
+        if (isHost) {
+          setGameState(data.gameState);
+        } else {
+          // クライアントは、送られてきたデータの敵・味方を反転させて適用する
+          const flippedState = {
+            ...data.gameState,
+            player: data.gameState.enemy,
+            enemy: data.gameState.player,
+            isPlayerTurn: !data.gameState.isPlayerTurn,
+            setlist: data.gameState.setlist.map(log => ({ ...log, owner: log.owner === 'player' ? 'enemy' : 'player' })),
+            turnBanner: data.gameState.turnBanner === "YOU FIRST!" ? "ENEMY FIRST!" : 
+                        data.gameState.turnBanner === "CPU FIRST!" ? "YOU FIRST!" : 
+                        data.gameState.turnBanner === "YOUR TURN" ? "ENEMY TURN" :
+                        data.gameState.turnBanner === "CPU TURN" ? "YOUR TURN" : data.gameState.turnBanner
+          };
+          setGameState(flippedState);
+        }
+        if (screen !== 'battle') setScreen('battle');
+      }
+    });
+
+    return () => {
+      if (unsubscribeRoomRef.current) unsubscribeRoomRef.current();
+    };
+  }, [roomId, isHost, screen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ===== デッキビルダー用ロジック =====
   const availableCards = selectedUnit ? getAvailableCards(selectedUnit) : [];
@@ -102,101 +144,71 @@ function App() {
     setDeckList(counts);
   };
 
-  // ===== オンライン対戦用ロジック =====
+  // デッキ作成完了時の分岐
+  const handleDeckComplete = () => {
+    if (gameMode === 'cpu') {
+      const playerCardNames = [];
+      Object.entries(deckList).forEach(([name, count]) => {
+        for (let i = 0; i < count; i++) playerCardNames.push(name);
+      });
+      const playerDeck = buildDeckFromList(playerCardNames);
+      const enemyDeck = generateCPUDeck();
+      
+      const state = createInitialState({ deck: playerDeck, unit: selectedUnit || 'スリーズブーケ' }, enemyDeck);
+      state.player.name = playerName || 'YOU';
+      state.enemy.name = '寮母さん';
+      
+      setGameState(state);
+      setScreen('battle');
+    } else {
+      setScreen('lobby');
+    }
+  };
+
+  // ===== 通信対戦ロジック =====
   const handleCreateRoom = async () => {
-    if (deckTotal !== 30) return;
     try {
       const playerCardNames = [];
       Object.entries(deckList).forEach(([name, count]) => {
         for (let i = 0; i < count; i++) playerCardNames.push(name);
       });
       const playerDeck = buildDeckFromList(playerCardNames);
-
-      setWaitingClient(true); // ボタンを待機中に変更
-      const newRoomId = await createRoom({ deck: playerDeck, unit: selectedUnit });
+      
+      const newRoomId = await createRoom({ deck: playerDeck, unit: selectedUnit }, playerName);
       setRoomId(newRoomId);
       setIsHost(true);
-      setOnlineMode(true);
+      setScreen('waitingRoom');
     } catch (error) {
-      console.error(error);
       alert("部屋の作成に失敗しました");
-      setWaitingClient(false);
     }
   };
 
-  const handleJoinRoom = async () => {
-    if (deckTotal !== 30 || inputRoomId.length !== 4) return;
+  const handleJoinRoom = async (id) => {
     try {
       const playerCardNames = [];
       Object.entries(deckList).forEach(([name, count]) => {
         for (let i = 0; i < count; i++) playerCardNames.push(name);
       });
       const playerDeck = buildDeckFromList(playerCardNames);
-
-      // ホストのデータを取得しつつ、自分のデータを書き込む
-      await joinRoom(inputRoomId, { deck: playerDeck, unit: selectedUnit });
-      setRoomId(inputRoomId);
+      
+      await joinRoom(id, { deck: playerDeck, unit: selectedUnit }, playerName);
+      setRoomId(id);
       setIsHost(false);
-      setOnlineMode(true);
-      alert("部屋に参加しました！ホストの通信を待っています...");
+      setScreen('waitingRoom');
     } catch (error) {
-      console.error(error);
-      alert(error.message || "部屋に参加できませんでした");
+      alert(error.message);
     }
   };
 
-  // 部屋の監視（Firebaseからのデータ受信）
-  useEffect(() => {
-    if (!roomId) return;
-    
-    unsubscribeRef.current = watchRoom(roomId, (data) => {
-      if (!data) return;
-
-      // 【ホスト側】クライアントが参加してきたら、対戦用Stateを作ってDBに投げる
-      if (isHost && waitingClient && data.status === 'playing' && data.clientDeck) {
-        setWaitingClient(false);
-        const initialState = createOnlineInitialState(data.hostDeck, data.clientDeck);
-        setGameState(initialState);
-        updateGameStateToDB(roomId, initialState);
-        setScreen('battle');
-      }
-
-      // 【クライアント側】ホストから新しいStateが送られてきたら画面を更新する
-      if (!isHost && data.gameState) {
-        // クライアント目線では、送られてきたデータ（ホスト目線）の敵味方を反転させる
-        const flippedState = {
-          ...data.gameState,
-          player: data.gameState.enemy,
-          enemy: data.gameState.player,
-          isPlayerTurn: !data.gameState.isPlayerTurn,
-          turnBanner: data.gameState.turnBanner === "YOU FIRST!" ? "ENEMY FIRST!" : 
-                      data.gameState.turnBanner === "CPU FIRST!" ? "YOU FIRST!" : 
-                      data.gameState.turnBanner === "YOUR TURN" ? "ENEMY TURN" :
-                      data.gameState.turnBanner === "CPU TURN" ? "YOUR TURN" : data.gameState.turnBanner
-        };
-        setGameState(flippedState);
-        if (screen !== 'battle') setScreen('battle');
-      }
-    });
-
-    return () => {
-      if (unsubscribeRef.current) unsubscribeRef.current();
-    };
-  }, [roomId, isHost, waitingClient, screen]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // 元からある startBattle 関数 (CPU戦用)
-  const startBattle = () => {
-    if (deckTotal !== 30) return;
-    // デッキリストをカード名配列に展開
-    const playerCardNames = [];
-    Object.entries(deckList).forEach(([name, count]) => {
-      for (let i = 0; i < count; i++) playerCardNames.push(name);
-    });
-    const playerDeck = buildDeckFromList(playerCardNames);
-    const enemyDeck = generateCPUDeck();
-    setGameState(createInitialState({ deck: playerDeck, unit: selectedUnit || 'スリーズブーケ' }, enemyDeck));
-    setScreen('battle');
+  const handleHostStartGame = async () => {
+    if (!roomData || !roomData.clientDeck) return;
+    const initialState = createOnlineInitialState(roomData.hostDeck, roomData.clientDeck);
+    initialState.player.name = roomData.hostName || 'YOU';
+    initialState.enemy.name = roomData.clientName || '相手';
+    // DBを更新することで、両者のwatchRoomが反応して同時にバトル画面へ遷移する
+    await startGameInDB(roomId, initialState);
   };
+
   // マナカーブの計算
   const manaCurve = [0, 0, 0, 0, 0, 0, 0, 0]; // 0〜6, 7以上
   Object.entries(deckList).forEach(([name, count]) => {
@@ -207,7 +219,6 @@ function App() {
   const maxManaCount = Math.max(1, ...manaCurve);
 
   // ===== バトル画面 =====
-  // (Hooks must be before any returns - add null guards inside)
 
   // コイントスフェーズの処理
   useEffect(() => {
@@ -259,14 +270,14 @@ function App() {
             turn: 1,
             isCoinFlipPhase: false,
             isPlayerTurn: playerGoesFirst,
-            turnBanner: playerGoesFirst ? "YOU FIRST!" : "CPU FIRST!",
+            turnBanner: playerGoesFirst ? "YOU FIRST!" : (gameMode === 'cpu' ? "CPU FIRST!" : "ENEMY FIRST!"),
             player: newPlayer,
             enemy: newEnemy,
           };
         });
       }, 2000);
     }
-  }, [gameState?.isCoinFlipPhase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gameState?.isCoinFlipPhase, gameMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Turn Start logic Banner Clear
   useEffect(() => {
@@ -317,8 +328,6 @@ function App() {
     }
     return true;
   };
-
-  // (discardRandomFromHand removed as it was unused)
 
   const startTurn = (isPlayer) => {
     setGameState(prev => {
@@ -381,7 +390,7 @@ function App() {
         return {
           ...prev,
           isPlayerTurn: isPlayer,
-          turnBanner: isPlayer ? "YOUR TURN (NO DRAW)" : "CPU TURN (NO DRAW)",
+          turnBanner: isPlayer ? "YOUR TURN (NO DRAW)" : (gameMode === 'cpu' ? "CPU TURN (NO DRAW)" : "ENEMY TURN (NO DRAW)"),
           setlist: [], 
           enemyPlayedCard: null,
           player: isPlayer ? newTarget : newPrevTarget,
@@ -404,7 +413,7 @@ function App() {
       return {
         ...prev,
         isPlayerTurn: isPlayer,
-        turnBanner: isPlayer ? "YOUR TURN" : "CPU TURN",
+        turnBanner: isPlayer ? "YOUR TURN" : (gameMode === 'cpu' ? "CPU TURN" : "ENEMY TURN"),
         setlist: [], 
         enemyPlayedCard: null,
         player: isPlayer ? newTarget : newPrevTarget,
@@ -515,14 +524,14 @@ function App() {
 
   // Enemy CPU logic
   useEffect(() => {
-    if (!gameState) return;
+    if (!gameState || gameMode !== 'cpu') return;
     if (!gameState.isCoinFlipPhase && !gameState.isPlayerTurn && gameState.enemy.hp > 0 && gameState.player.hp > 0 && !gameState.turnBanner) {
       cpuTurnRef.current = setTimeout(() => {
         playEnemyTurn();
       }, 1500);
       return () => clearTimeout(cpuTurnRef.current);
     }
-  }, [gameState?.isPlayerTurn, gameState?.enemy?.currentVoltage, gameState?.turnBanner, gameState?.isCoinFlipPhase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gameState?.isPlayerTurn, gameState?.enemy?.currentVoltage, gameState?.turnBanner, gameState?.isCoinFlipPhase, gameMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const playEnemyTurn = () => {
     const { enemy } = gameState;
@@ -664,6 +673,12 @@ function App() {
         }
 
         newState.isAnimating = false;
+        
+        // 🚨 オンライン同期: 自分のアクション結果をDBに反映する
+        if (gameMode === 'online' && isPlayer) {
+          updateGameStateToDB(roomId, newState);
+        }
+
         return newState;
       });
       
@@ -679,7 +694,13 @@ function App() {
               else if (targetHp <= 0) result = isPlayer ? "WIN" : "LOSE";
               else if (userHp <= 0) result = isPlayer ? "LOSE" : "WIN";
 
-              return result ? { ...current, battleResult: result } : current;
+              const finalState = result ? { ...current, battleResult: result } : current;
+              
+              if (gameMode === 'online' && isPlayer && result) {
+                updateGameStateToDB(roomId, finalState);
+              }
+              
+              return finalState;
           });
       }, 350);
     }, 300);
@@ -702,30 +723,79 @@ function App() {
     return points;
   };
 
-  // ===== タイトル画面 =====
-  if (screen === 'title') {
+  // ===== 新規画面群 (Home, Lobby, WaitingRoom) =====
+  if (screen === 'home') {
     return (
-      <>
-        <div className="orientation-warning">
-          <Smartphone size={64} />
-          <h2 style={{marginTop:'1rem'}}>画面を横向きにしてください</h2>
-          <p>このゲームは横画面専用です</p>
+      <div className="home-screen">
+        <div className="title-logo" style={{ marginBottom: '2rem', textAlign: 'center' }}>
+          <span className="title-link">Link!</span><span className="title-like">Like!</span><span className="title-battle">Battle!</span>
         </div>
-        <div className="title-screen">
-        <div className="title-content">
-          <div className="title-logo">
-            <span className="title-link">Link!</span>
-            <span className="title-like">Like!</span>
-            <span className="title-battle">Battle!</span>
-          </div>
-          <p className="title-subtitle">究極のスクールアイドルバトル</p>
-          <button className="title-start-btn" onClick={() => { setSelectedUnit(null); setDeckList({}); setScreen('deckBuilder'); }}>
-            <span>はじめる</span>
-            <ChevronRight size={24} />
+        <p className="title-subtitle">究極のスクールアイドルバトル</p>
+        <input 
+          className="name-input" 
+          maxLength="6" 
+          value={playerName} 
+          onChange={e => setPlayerName(e.target.value)} 
+          placeholder="プレイヤー名 (最大6文字)" 
+        />
+        <div className="mode-buttons">
+          <button className="title-start-btn" onClick={() => { setGameMode('cpu'); setScreen('deckBuilder'); }}>
+            CPU戦で遊ぶ
+          </button>
+          <button className="title-start-btn" style={{ background: 'var(--secondary)' }} onClick={() => { setGameMode('online'); setScreen('deckBuilder'); }}>
+            通信対戦で遊ぶ
           </button>
         </div>
       </div>
-      </>
+    );
+  }
+
+  if (screen === 'lobby') {
+    return (
+      <div className="lobby-screen">
+        <h2 style={{ fontSize: '2rem', marginBottom: '1rem', color: 'var(--secondary)', fontFamily: 'Outfit' }}>ROOMLIST</h2>
+        <button className="title-start-btn" style={{ marginBottom: '1rem' }} onClick={handleCreateRoom}>
+          部屋を作る
+        </button>
+        <div className="room-list">
+          {roomsList.length === 0 ? <p style={{ textAlign: 'center', color: '#666' }}>現在、待機中の部屋はありません。</p> : roomsList.map(r => (
+            <div key={r.id} className="room-item">
+              <span>{r.roomName}</span>
+              <button className="room-join-btn" onClick={() => handleJoinRoom(r.id)}>入る</button>
+            </div>
+          ))}
+        </div>
+        <button style={{ marginTop: '2rem', padding: '10px', background: 'none', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }} onClick={() => setScreen('home')}>
+          戻る
+        </button>
+      </div>
+    );
+  }
+
+  if (screen === 'waitingRoom') {
+    return (
+      <div className="waiting-screen">
+        <div className="waiting-box">
+          <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#333' }}>
+            {isHost ? 'あなたの部屋' : '通信待機室'}
+          </h2>
+          <div className="vs-text">{isHost ? playerName || 'YOU' : roomData?.hostName}</div>
+          <div style={{ fontWeight: 'bold', color: '#666' }}>VS</div>
+          <div className="vs-text">{isHost ? (roomData?.clientName || '待機中...') : playerName || 'YOU'}</div>
+          
+          <div style={{ marginTop: '2rem' }}>
+            {isHost ? (
+              roomData?.status === 'ready' 
+                ? <button className="title-start-btn" onClick={handleHostStartGame}>バトル開始</button>
+                : <p style={{ color: '#666' }}>相手の準備を待っています...</p>
+            ) : (
+              roomData?.status === 'waiting'
+                ? <button className="title-start-btn" style={{ background: '#10b981' }} onClick={() => setClientReady(roomId)}>準備OK</button>
+                : <p style={{ color: '#666' }}>ホストの開始を待っています...</p>
+            )}
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -741,8 +811,8 @@ function App() {
         <div className="deck-builder-screen">
         <div className="deck-builder-sticky-header" style={{position:'sticky', top:0, background:'#fff', zIndex:1000, paddingBottom:'5px', borderBottom:'1px solid #eee'}}>
           <div className="deck-builder-header">
-            <button className="back-btn" onClick={() => setScreen('title')}>← タイトルへ</button>
-            <h1 className="deck-builder-title">デッキ作成</h1>
+            <button className="back-btn" onClick={() => setScreen('home')}>← ホームへ</button>
+            <h1 className="deck-builder-title">デッキ作成 ({gameMode === 'cpu' ? 'CPU戦' : '通信対戦'})</h1>
             <div className="deck-counter">{deckTotal} / 30</div>
           </div>
 
@@ -781,45 +851,15 @@ function App() {
               </button>
             ))}
             
-            {/* ここから右寄せのアクションボタン群 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginLeft: 'auto', alignItems: 'flex-end' }}>
-              
-              {/* 元のバトル開始（CPU戦） */}
+            <div style={{ marginLeft: 'auto' }}>
               <button
                 className={`battle-start-btn ${deckTotal === 30 ? 'ready' : ''}`}
                 disabled={deckTotal !== 30}
-                onClick={startBattle}
-                style={{ width: '100%', padding: '0.4rem 1.5rem', fontSize: '1rem' }}
+                onClick={handleDeckComplete}
+                style={{ width: 'auto', padding: '0.4rem 1.5rem', fontSize: '1rem' }}
               >
-                CPU戦開始
+                {gameMode === 'cpu' ? 'バトル開始' : 'ロビーへ進む'}
               </button>
-              
-              {/* オンライン機能エリア */}
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button
-                  className={`battle-start-btn ${deckTotal === 30 ? 'ready' : ''}`}
-                  disabled={deckTotal !== 30 || waitingClient}
-                  onClick={handleCreateRoom}
-                  style={{ width: 'auto', padding: '0.4rem 1rem', fontSize: '0.8rem', background: deckTotal === 30 ? '#3b82f6' : '#ccc' }}
-                >
-                  {waitingClient ? `待機中 ID: ${roomId}` : '部屋を作る'}
-                </button>
-                <div style={{ display: 'flex', gap: '2px' }}>
-                  <input 
-                    value={inputRoomId} onChange={e => setInputRoomId(e.target.value.toUpperCase())}
-                    placeholder="ルームID" maxLength="4"
-                    style={{ width: '70px', padding: '2px 4px', fontSize: '0.8rem', border: '1px solid #ccc', borderRadius: '4px', textTransform: 'uppercase' }}
-                  />
-                  <button
-                    className={`battle-start-btn ${deckTotal === 30 && inputRoomId.length === 4 ? 'ready' : ''}`}
-                    disabled={deckTotal !== 30 || inputRoomId.length !== 4}
-                    onClick={handleJoinRoom}
-                    style={{ width: 'auto', padding: '0.4rem 1rem', fontSize: '0.8rem', background: (deckTotal === 30 && inputRoomId.length === 4) ? '#10b981' : '#ccc' }}
-                  >
-                    入る
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -926,6 +966,7 @@ function App() {
     );
   }
 
+  // ===== バトル画面 =====
   if (screen === 'battle') {
     if (!gameState) return null;
     return (
@@ -978,7 +1019,7 @@ function App() {
           <div className={`player-status enemy-status ${gameState.animations.enemyShake ? 'shake' : ''}`}>
             <div className="player-info">
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span className="player-name">寮母さん</span>
+                <span className="player-name">{gameState.enemy.name || '相手'}</span>
                 <span style={{ fontSize: '0.6rem', color: '#666' }}>{gameState.enemy.baseUnit}</span>
               </div>
               <span className="hp-text">{gameState.enemy.hp} / {gameState.enemy.maxHp}</span>
@@ -1017,7 +1058,7 @@ function App() {
         <div className={`player-status self-status ${gameState.animations.playerShake ? 'shake' : ''}`}>
            <div className="player-info">
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span className="player-name">YOU</span>
+              <span className="player-name">{gameState.player.name || 'YOU'}</span>
               <span style={{ fontSize: '0.6rem', color: '#666' }}>{gameState.player.baseUnit}</span>
             </div>
             <span className="hp-text">{gameState.player.hp} / {gameState.player.maxHp}</span>
@@ -1045,10 +1086,12 @@ function App() {
               if(!gameState.player.specialUsed && gameState.isPlayerTurn && !gameState.turnBanner) {
                   setGameState(prev => {
                       const newVoltage = Math.min(prev.player.maxVoltage, prev.player.currentVoltage + 4);
-                      return {
+                      const newState = {
                           ...prev,
                           player: { ...prev.player, currentVoltage: newVoltage, specialUsed: true }
                       };
+                      if (gameMode === 'online') updateGameStateToDB(roomId, newState);
+                      return newState;
                   });
               }
           }} disabled={gameState.player.specialUsed || !gameState.isPlayerTurn || !!gameState.turnBanner || gameState.isCoinFlipPhase}>
@@ -1061,9 +1104,6 @@ function App() {
            <button className="end-turn-btn" onClick={endTurnPlayer}>END TURN</button>
         )}
       </div>
-
-
-
 
       {/* Card Preview */}
       {selectedCard && (
@@ -1103,7 +1143,6 @@ function App() {
           const isMobile = window.innerHeight <= 480;
           const cardWidth = isMobile ? 85 : 130;
           const actualMaxWidth = Math.max(200, window.innerWidth - (isMobile ? 160 : 220));
-          // カードが全て収まるために必要なマージンを計算（最低でもカード幅の35%は見えるように）
           const minVisible = cardWidth * 0.35;
           let marginLeft;
           if (idx === 0) {
@@ -1155,7 +1194,7 @@ function App() {
         <div className="modal-overlay" onClick={() => setShowDiscard({ show: false, owner: null })}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 style={{fontFamily:'Outfit', margin: 0}}>{showDiscard.owner === 'player' ? 'YOUR' : 'CPU'} DISCARD PILE</h2>
+              <h2 style={{fontFamily:'Outfit', margin: 0}}>{showDiscard.owner === 'player' ? 'YOUR' : 'ENEMY'} DISCARD PILE</h2>
               <button className="modal-close" onClick={() => setShowDiscard({ show: false, owner: null })}><X size={20}/></button>
             </div>
             <div className="modal-grid">
@@ -1176,8 +1215,13 @@ function App() {
               {gameState.battleResult === 'WIN' ? 'Victory!' : gameState.battleResult === 'LOSE' ? 'Defeat...' : 'Draw'}
             </div>
             <div className="battle-end-actions">
-              <button className="end-action-btn btn-rematch" onClick={handleRematch}>もう一度戦う</button>
-              <button className="end-action-btn btn-menu" onClick={() => setScreen('deckBuilder')}>デッキ選択に戻る</button>
+              {gameMode === 'cpu' && <button className="end-action-btn btn-rematch" onClick={handleRematch}>もう一度戦う</button>}
+              <button className="end-action-btn btn-menu" onClick={() => {
+                if (gameMode === 'online' && isHost && roomId) deleteRoom(roomId);
+                setScreen('home');
+              }}>
+                ホームに戻る
+              </button>
             </div>
           </div>
         </div>
