@@ -244,11 +244,20 @@ export function applyCardEffects(state, card, isPlayer) {
     if (effectText.includes("捨札からコスト4以下のカードを使用する") || effectText.includes("捨札からコスト4以下のカードを")) {
       const candidates = user.discard.filter(c => (Number(c.コスト) || 0) <= 4);
       if (candidates.length > 0) {
-        const idx = Math.floor(Math.random() * candidates.length);
-        const [picked] = user.discard.splice(user.discard.indexOf(candidates[idx]), 1);
-        if (user.hand.length >= 8) user.discard.push(picked);
-        else user.hand.push(picked);
-        addEvent('draw', { name: picked.曲名, reason: 'discard_recall' });
+        if (isPlayer) {
+          // プレイヤーの場合はUIで選択させる（イベントで通知）
+          addEvent('discard_select', { maxCost: 4, reason: 'dear_my_future' });
+        } else {
+          // CPUの場合はランダムに選択して効果発動
+          const idx = Math.floor(Math.random() * candidates.length);
+          const picked = candidates[idx];
+          const discardIdx = user.discard.indexOf(picked);
+          if (discardIdx !== -1) {
+            user.discard.splice(discardIdx, 1);
+            user.discard.push(picked); // 使用後は捨て札へ
+            addEvent('draw', { name: picked.曲名, reason: 'dear_my_future_cpu' });
+          }
+        }
       }
     }
 
