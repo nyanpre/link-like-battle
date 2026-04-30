@@ -54,8 +54,19 @@ function App() {
   const [damageTexts, setDamageTexts] = useState([]);
   const [showDiscard, setShowDiscard] = useState({ show: false, owner: null });
   const [selectedCard, setSelectedCard] = useState(null);
+  const [onlineMode, setOnlineMode] = useState(false);
+  const [roomId, setRoomId] = useState('');
+  const [inputRoomId, setInputRoomId] = useState('');
+  const [isHost, setIsHost] = useState(false);
+  const [waitingClient, setWaitingClient] = useState(false);
   
   const cpuTurnRef = useRef(null);
+  const unsubscribeRef = useRef(null);
+  const currentGameStateRef = useRef(null); // ホストがDB更新時に最新のStateを参照するため
+
+  useEffect(() => {
+    currentGameStateRef.current = gameState;
+  }, [gameState]);
 
   // ===== デッキビルダー用ロジック =====
   const availableCards = selectedUnit ? getAvailableCards(selectedUnit) : [];
@@ -687,14 +698,47 @@ function App() {
                 {unit}
               </button>
             ))}
-            <button
-              className={`battle-start-btn ${deckTotal === 30 ? 'ready' : ''}`}
-              disabled={deckTotal !== 30}
-              onClick={startBattle}
-              style={{ marginLeft: 'auto', width: 'auto', padding: '0.4rem 1.5rem', fontSize: '1rem' }}
-            >
-              バトル開始
-            </button>
+            
+            {/* ここから右寄せのアクションボタン群 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginLeft: 'auto', alignItems: 'flex-end' }}>
+              
+              {/* 元のバトル開始（CPU戦） */}
+              <button
+                className={`battle-start-btn ${deckTotal === 30 ? 'ready' : ''}`}
+                disabled={deckTotal !== 30}
+                onClick={startBattle}
+                style={{ width: '100%', padding: '0.4rem 1.5rem', fontSize: '1rem' }}
+              >
+                CPU戦開始
+              </button>
+              
+              {/* オンライン機能エリア */}
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button
+                  className={`battle-start-btn ${deckTotal === 30 ? 'ready' : ''}`}
+                  disabled={deckTotal !== 30 || waitingClient}
+                  onClick={handleCreateRoom}
+                  style={{ width: 'auto', padding: '0.4rem 1rem', fontSize: '0.8rem', background: deckTotal === 30 ? '#3b82f6' : '#ccc' }}
+                >
+                  {waitingClient ? `待機中 ID: ${roomId}` : '部屋を作る'}
+                </button>
+                <div style={{ display: 'flex', gap: '2px' }}>
+                  <input 
+                    value={inputRoomId} onChange={e => setInputRoomId(e.target.value.toUpperCase())}
+                    placeholder="ルームID" maxLength="4"
+                    style={{ width: '70px', padding: '2px 4px', fontSize: '0.8rem', border: '1px solid #ccc', borderRadius: '4px', textTransform: 'uppercase' }}
+                  />
+                  <button
+                    className={`battle-start-btn ${deckTotal === 30 && inputRoomId.length === 4 ? 'ready' : ''}`}
+                    disabled={deckTotal !== 30 || inputRoomId.length !== 4}
+                    onClick={handleJoinRoom}
+                    style={{ width: 'auto', padding: '0.4rem 1rem', fontSize: '0.8rem', background: (deckTotal === 30 && inputRoomId.length === 4) ? '#10b981' : '#ccc' }}
+                  >
+                    入る
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {selectedUnit && (
