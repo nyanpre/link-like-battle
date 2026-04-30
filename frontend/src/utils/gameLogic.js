@@ -151,3 +151,31 @@ export function createInitialState(playerDeckData, enemyDeckData) {
     }
   };
 }
+
+export function createOnlineInitialState(playerData, enemyData) {
+  // playerData, enemyData は { deck: [], unit: '...' } の形式
+  return {
+    turn: 1,
+    isPlayerTurn: true,
+    isCoinFlipPhase: true,
+    turnBanner: "COIN FLIP...",
+    setlist: [],
+    enemyPlayedCard: null,
+    isAnimating: false,
+    player: {
+      baseUnit: playerData.unit,
+      originalDeckNames: playerData.deck.map(c => c.曲名),
+      hp: 30, maxHp: 30, shield: 0, maxVoltage: 0, currentVoltage: 0, specialUsed: false,
+      deck: playerData.deck.slice(3), hand: playerData.deck.slice(0, 3), discard: [],
+      buffs: { damageImmune: false, nextCardCostDown: 0, turnCardsPlayed: [] }
+    },
+    enemy: {
+      baseUnit: enemyData.unit,
+      originalDeckNames: enemyData.deck.map(c => c.曲名),
+      hp: 30, maxHp: 30, shield: 0, maxVoltage: 0, currentVoltage: 0, specialUsed: false,
+      deck: enemyData.deck.slice(3), hand: enemyData.deck.slice(0, 3), discard: [],
+      buffs: { damageImmune: false, nextCardCostDown: 0, turnCardsPlayed: [] }
+    },
+    animations: { playerShake: false, enemyShake: false, damageTexts: [] }
+  };
+}
