@@ -613,7 +613,6 @@ function App() {
       user.hand = user.hand.filter(c => c.id !== card.id);
       user.discard.push(card);
       newState.setlist.push({ card, owner: isPlayer ? 'player' : 'enemy' });
-      user.buffs.turnCardsPlayed.push(card.曲名);
       
       newState.enemyPlayedCard = !isPlayer ? card : null;
       newState.isAnimating = true;
@@ -727,16 +726,16 @@ function App() {
   if (screen === 'home') {
     return (
       <div className="home-screen">
-        <div className="title-logo" style={{ marginBottom: '2rem', textAlign: 'center' }}>
-          <span className="title-link">Link!</span><span className="title-like">Like!</span><span className="title-battle">Battle!</span>
+        <div className="title-logo" style={{ marginBottom: '0.5rem', textAlign: 'center' }}>
+          <span className="title-link">Link!</span><span className="title-like">Like!</span><span className="title-link">Battle!</span>
         </div>
         <p className="title-subtitle">究極のスクールアイドルバトル</p>
         <input 
           className="name-input" 
-          maxLength="6" 
+          maxLength={8} 
           value={playerName} 
           onChange={e => setPlayerName(e.target.value)} 
-          placeholder="プレイヤー名 (最大6文字)" 
+          placeholder="プレイヤー名 (最大8文字)" 
         />
         <div className="mode-buttons">
           <button className="title-start-btn" onClick={() => { setGameMode('cpu'); setScreen('deckBuilder'); }}>
@@ -955,9 +954,27 @@ function App() {
           )}
         
         {selectedCard && (
-          <div className="modal-overlay" onClick={() => setSelectedCard(null)}>
-            <div className="modal-content" style={{maxWidth: '350px', transform: 'scale(1.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'transparent', border: 'none', boxShadow: 'none'}}>
-              <StandardCard card={selectedCard} />
+          <div className="card-preview-overlay" onClick={() => setSelectedCard(null)}>
+            <div className="card-preview" style={{ background: getCardBackground(selectedCard.歌唱) }} onClick={e => e.stopPropagation()}>
+              <div className="card-cost" style={{top:'-12px', left:'-12px', width:'44px', height:'44px', fontSize:'1.4rem'}}>{selectedCard.コスト}</div>
+              <div className="card-title" style={{fontSize:'1.4rem'}}>{selectedCard.曲名}</div>
+              <div className="card-tags" style={{fontSize:'0.85rem'}}>
+                <span>{selectedCard.歌唱}</span>
+                <span>{selectedCard.センター}</span>
+              </div>
+              <div className="card-stats" style={{fontSize:'0.95rem', padding:'8px'}}>
+                {selectedCard.パワー && <span className="stat-item stat-power"><Swords size={16}/>{selectedCard.パワー}</span>}
+                {selectedCard.シールド && <span className="stat-item stat-shield"><Shield size={16}/>{selectedCard.シールド}</span>}
+                {selectedCard.ヒール && <span className="stat-item stat-heal"><HeartPulse size={16}/>{selectedCard.ヒール}</span>}
+                {selectedCard.ダメージ && <span className="stat-item stat-damage"><Zap size={16}/>{selectedCard.ダメージ}</span>}
+              </div>
+              <div className="card-effect" style={{fontSize:'1.15rem', padding:'12px'}}>
+                {selectedCard.効果1 && <div style={{marginBottom:'6px'}}>{selectedCard.効果1}</div>}
+                {selectedCard.効果2 && <div>{selectedCard.効果2}</div>}
+              </div>
+              <div style={{display:'flex', gap:'8px', marginTop:'10px'}}>
+                <button className="preview-close-btn" onClick={() => setSelectedCard(null)}>閉じる</button>
+              </div>
             </div>
           </div>
         )}
@@ -1135,14 +1152,27 @@ function App() {
         </div>
       )}
 
-      <div className="hand-container" style={{ maxWidth: `${Math.max(200, window.innerWidth - (window.innerHeight <= 480 ? 160 : 220))}px` }}>
+      <div className="hand-container" style={{ maxWidth: `${Math.max(200, window.innerWidth - (window.innerHeight <= 480 ? 240 : 440))}px` }}>
         {gameState.player.hand.map((card, idx, arr) => {
           const calcCost = getCalculatedCost(card, gameState.player);
           const canPlay = gameState.isPlayerTurn && gameState.player.currentVoltage >= calcCost && !gameState.turnBanner && !gameState.isCoinFlipPhase && !gameState.isAnimating;
           
           const isMobile = window.innerHeight <= 480;
-          const cardWidth = isMobile ? 85 : 130;
-          const actualMaxWidth = Math.max(200, window.innerWidth - (isMobile ? 160 : 220));
+          const baseCardWidth = isMobile ? 85 : 130;
+          const baseCardHeight = isMobile ? 120 : 224;
+          const actualMaxWidth = Math.max(200, window.innerWidth - (isMobile ? 240 : 440));
+          
+          // 5枚以下: フルサイズ。6枚以上: カード幅を縮小して被りを防ぐ
+          const maxCardsFullSize = 5;
+          let cardScale = 1;
+          if (arr.length > maxCardsFullSize) {
+            // 枚数が増えるほど縮小（最小60%まで）
+            cardScale = Math.max(0.6, maxCardsFullSize / arr.length);
+          }
+          const cardWidth = Math.round(baseCardWidth * cardScale);
+          const cardHeight = Math.round(baseCardHeight * cardScale);
+          
+          // カードが全て収まるためのマージン計算（最低でもカード幅の35%は見えるように）
           const minVisible = cardWidth * 0.35;
           let marginLeft;
           if (idx === 0) {
@@ -1164,7 +1194,10 @@ function App() {
                     opacity: canPlay ? 1 : 0.4,
                     cursor: 'pointer',
                     filter: canPlay ? 'none' : 'grayscale(30%)',
-                    marginLeft: marginLeft
+                    marginLeft: marginLeft,
+                    width: `${cardWidth}px`,
+                    height: `${cardHeight}px`,
+                    fontSize: cardScale < 1 ? `${cardScale * 100}%` : undefined
                 }}
                 onClick={() => setSelectedCard(card)}
             >
