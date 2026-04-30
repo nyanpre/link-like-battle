@@ -102,6 +102,89 @@ function App() {
     setDeckList(counts);
   };
 
+  // ===== オンライン対戦用ロジック =====
+  const handleCreateRoom = async () => {
+    if (deckTotal !== 30) return;
+    try {
+      const playerCardNames = [];
+      Object.entries(deckList).forEach(([name, count]) => {
+        for (let i = 0; i < count; i++) playerCardNames.push(name);
+      });
+      const playerDeck = buildDeckFromList(playerCardNames);
+
+      setWaitingClient(true); // ボタンを待機中に変更
+      const newRoomId = await createRoom({ deck: playerDeck, unit: selectedUnit });
+      setRoomId(newRoomId);
+      setIsHost(true);
+      setOnlineMode(true);
+    } catch (error) {
+      console.error(error);
+      alert("部屋の作成に失敗しました");
+      setWaitingClient(false);
+    }
+  };
+
+  const handleJoinRoom = async () => {
+    if (deckTotal !== 30 || inputRoomId.length !== 4) return;
+    try {
+      const playerCardNames = [];
+      Object.entries(deckList).forEach(([name, count]) => {
+        for (let i = 0; i < count; i++) playerCardNames.push(name);
+      });
+      const playerDeck = buildDeckFromList(playerCardNames);
+
+      // ホストのデータを取得しつつ、自分のデータを書き込む
+      await joinRoom(inputRoomId, { deck: playerDeck, unit: selectedUnit });
+      setRoomId(inputRoomId);
+      setIsHost(false);
+      setOnlineMode(true);
+      alert("部屋に参加しました！ホストの通信を待っています...");
+    } catch (error) {
+      console.error(error);
+      alert(error.message || "部屋に参加できませんでした");
+    }
+  };
+
+  // 部屋の監視（Firebaseからのデータ受信）
+  useEffect(() => {
+    if (!roomId) return;
+    
+    unsubscribeRef.current = watchRoom(roomId, (data) => {
+      if (!data) return;
+
+      // 【ホスト側】クライアントが参加してきたら、対戦用Stateを作ってDBに投げる
+      if (isHost && waitingClient && data.status === 'playing' && data.clientDeck) {
+        setWaitingClient(false);
+        const initialState = createOnlineInitialState(data.hostDeck, data.clientDeck);
+        setGameState(initialState);
+        updateGameStateToDB(roomId, initialState);
+        setScreen('battle');
+      }
+
+      // 【クライアント側】ホストから新しいStateが送られてきたら画面を更新する
+      if (!isHost && data.gameState) {
+        // クライアント目線では、送られてきたデータ（ホスト目線）の敵味方を反転させる
+        const flippedState = {
+          ...data.gameState,
+          player: data.gameState.enemy,
+          enemy: data.gameState.player,
+          isPlayerTurn: !data.gameState.isPlayerTurn,
+          turnBanner: data.gameState.turnBanner === "YOU FIRST!" ? "ENEMY FIRST!" : 
+                      data.gameState.turnBanner === "CPU FIRST!" ? "YOU FIRST!" : 
+                      data.gameState.turnBanner === "YOUR TURN" ? "ENEMY TURN" :
+                      data.gameState.turnBanner === "CPU TURN" ? "YOUR TURN" : data.gameState.turnBanner
+        };
+        setGameState(flippedState);
+        if (screen !== 'battle') setScreen('battle');
+      }
+    });
+
+    return () => {
+      if (unsubscribeRef.current) unsubscribeRef.current();
+    };
+  }, [roomId, isHost, waitingClient, screen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 元からある startBattle 関数 (CPU戦用)
   const startBattle = () => {
     if (deckTotal !== 30) return;
     // デッキリストをカード名配列に展開
@@ -114,7 +197,6 @@ function App() {
     setGameState(createInitialState({ deck: playerDeck, unit: selectedUnit || 'スリーズブーケ' }, enemyDeck));
     setScreen('battle');
   };
-
   // マナカーブの計算
   const manaCurve = [0, 0, 0, 0, 0, 0, 0, 0]; // 0〜6, 7以上
   Object.entries(deckList).forEach(([name, count]) => {
