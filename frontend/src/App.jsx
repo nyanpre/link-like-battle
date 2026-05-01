@@ -468,20 +468,12 @@ function App() {
             engineDrawCard(newPlayer);
           }
         } else if (effect.type === 'draw_specific' && effect.name) {
-          // デッキから特定のカードを探してドロー
+          // デッキから特定のカードを探してドロー（デッキにない場合は何もしない）
           const idx = newPlayer.deck.findIndex(c => c.曲名 === effect.name);
           if (idx !== -1) {
             const [found] = newPlayer.deck.splice(idx, 1);
             if (newPlayer.hand.length >= 8) newPlayer.discard.push(found);
             else newPlayer.hand.push(found);
-          } else {
-            // デッキになければ捨て札から探す
-            const dIdx = newPlayer.discard.findIndex(c => c.曲名 === effect.name);
-            if (dIdx !== -1) {
-              const [found] = newPlayer.discard.splice(dIdx, 1);
-              if (newPlayer.hand.length >= 8) newPlayer.discard.push(found);
-              else newPlayer.hand.push(found);
-            }
           }
         } else if (effect.type === 'heal' && effect.value) {
           newPlayer.hp = Math.min(newPlayer.maxHp, newPlayer.hp + effect.value);
@@ -489,25 +481,6 @@ function App() {
       });
       
       return { ...prev, player: newPlayer };
-    });
-
-    // 「このターンの最後に使用した時、Dream Believersをドローする」チェック
-    setGameState(prev => {
-      const lastPlayed = prev.setlist[prev.setlist.length - 1];
-      if (lastPlayed && lastPlayed.owner === 'player' && lastPlayed.card.曲名 === 'Dream Believers') {
-        const deckIdx = prev.player.deck.findIndex(c => c.曲名 === 'Dream Believers');
-        if (deckIdx !== -1) {
-          const newPlayer = {
-            ...prev.player,
-            deck: [...prev.player.deck],
-            hand: [...prev.player.hand]
-          };
-          const [dbCard] = newPlayer.deck.splice(deckIdx, 1);
-          newPlayer.hand.push(dbCard);
-          return { ...prev, player: newPlayer };
-        }
-      }
-      return prev;
     });
 
     startTurn(false);
@@ -587,13 +560,6 @@ function App() {
               const [found] = newEnemy.deck.splice(idx, 1);
               if (newEnemy.hand.length >= 8) newEnemy.discard.push(found);
               else newEnemy.hand.push(found);
-            } else {
-              const dIdx = newEnemy.discard.findIndex(c => c.曲名 === effect.name);
-              if (dIdx !== -1) {
-                const [found] = newEnemy.discard.splice(dIdx, 1);
-                if (newEnemy.hand.length >= 8) newEnemy.discard.push(found);
-                else newEnemy.hand.push(found);
-              }
             }
           } else if (effect.type === 'heal' && effect.value) {
             newEnemy.hp = Math.min(newEnemy.maxHp, newEnemy.hp + effect.value);
@@ -638,39 +604,50 @@ function App() {
         const { newState, events } = applyCardEffects(prevState, card, isPlayer);
         
         // UI側の演出（damageText, shake）を処理 - 各エフェクトを600ms間隔で、位置をずらして重ならないようにする
+        // 位置計算: self-status bottom:4rem → playerHP_Y ≈ innerHeight - 100
+        //           enemy-status top:4rem → enemyHP_Y ≈ 40
+        const isMobile = window.innerHeight <= 480;
+        const playerHP_Y = window.innerHeight - (isMobile ? 80 : 120);
+        const enemyHP_Y = isMobile ? 30 : 50;
+        const hpBarX = isMobile ? 10 : 30;
+        const deckAreaX = hpBarX + (isMobile ? 70 : 120); // デッキアイコンの横
+        
         let effectIndex = 0;
         events.forEach((ev) => {
           const delay = effectIndex * 600;
-          const offsetX = 30 + (effectIndex % 3) * 60; // 横方向にずらす
-          const offsetY = (effectIndex % 3) * 40; // 縦方向にもずらす
+          const offsetY = (effectIndex % 3) * 25;
           effectIndex++;
           setTimeout(() => {
             if (ev.type === 'damage') {
+              // 相手へのダメージ → 相手のHPバーの上
               const isTargetPlayer = ev.data.target === 'player';
-              const baseY = isTargetPlayer ? window.innerHeight - 200 : 200;
-              addDamageText(offsetX, baseY - offsetY, `-${ev.data.value}`);
+              const y = isTargetPlayer ? playerHP_Y - 30 - offsetY : enemyHP_Y - 10 - offsetY;
+              addDamageText(hpBarX + 20, y, `-${ev.data.value}`);
               triggerShake(isTargetPlayer ? 'player' : 'enemy');
             }
             if (ev.type === 'damage_self') {
-              const baseY = isPlayer ? window.innerHeight - 200 : 200;
-              addDamageText(offsetX, baseY - offsetY, `-${ev.data.value}`, '#ff6b35');
+              // 自傷ダメージ → 自分のHPバーの上
+              const y = isPlayer ? playerHP_Y - 30 - offsetY : enemyHP_Y - 10 - offsetY;
+              addDamageText(hpBarX + 20, y, `-${ev.data.value}`, '#ff6b35');
               triggerShake(isPlayer ? 'player' : 'enemy');
             }
             if (ev.type === 'heal') {
-              const baseY = isPlayer ? window.innerHeight - 200 : 200;
-              addDamageText(offsetX, baseY - offsetY, `+${ev.data.value}`, '#10b981');
+              // ヒール → 自分のHPバーの上
+              const y = isPlayer ? playerHP_Y - 30 - offsetY : enemyHP_Y - 10 - offsetY;
+              addDamageText(hpBarX + 20, y, `+${ev.data.value}`, '#10b981');
             }
             if (ev.type === 'voltage') {
-              const baseY = isPlayer ? window.innerHeight - 200 : 200;
-              addDamageText(offsetX, baseY - offsetY, `+⚡${ev.data.value}`, '#f59e0b');
+              const y = isPlayer ? playerHP_Y - 30 - offsetY : enemyHP_Y - 10 - offsetY;
+              addDamageText(hpBarX + 20, y, `+⚡${ev.data.value}`, '#f59e0b');
             }
             if (ev.type === 'shield') {
-              const baseY = isPlayer ? window.innerHeight - 200 : 200;
-              addDamageText(offsetX, baseY - offsetY, `+🛡${ev.data.value}`, '#3b82f6');
+              const y = isPlayer ? playerHP_Y - 30 - offsetY : enemyHP_Y - 10 - offsetY;
+              addDamageText(hpBarX + 20, y, `+🛡${ev.data.value}`, '#3b82f6');
             }
             if (ev.type === 'draw') {
-              const baseY = isPlayer ? window.innerHeight / 2 : window.innerHeight / 2 - 60;
-              addDrawEffect(window.innerWidth / 2 - 60, baseY, `🃏 Draw ${ev.data.count || 1}`);
+              // ドロー → デッキアイコンの上
+              const y = isPlayer ? playerHP_Y - 50 - offsetY : enemyHP_Y + 10 - offsetY;
+              addDrawEffect(deckAreaX, y, `🃏 Draw ${ev.data.count || 1}`);
             }
             if (ev.type === 'discard_select' && isPlayer) {
               // Dear my future: 捨て札からカードを選ばせる
@@ -678,6 +655,7 @@ function App() {
               setDiscardSelectMode({
                 reason: ev.data.reason,
                 maxCost: ev.data.maxCost,
+                excludeId: ev.data.excludeId,
                 callback: (selectedDiscardCard, discardIndex) => {
                   // 選んだカードの効果を発動
                   setGameState(prev => {
@@ -698,14 +676,19 @@ function App() {
                       // 使用後は捨て札へ
                       resultState.player.discard.push(card);
                       // サブエフェクトの演出
+                      const mobH = window.innerHeight <= 480;
+                      const pY = window.innerHeight - (mobH ? 80 : 120);
+                      const eY = mobH ? 30 : 50;
+                      const bX = mobH ? 30 : 50;
                       subEvents.forEach((subEv, si) => {
                         setTimeout(() => {
                           if (subEv.type === 'damage') {
-                            addDamageText(50, subEv.data.target === 'player' ? window.innerHeight - 200 : 200, `-${subEv.data.value}`);
+                            const y = subEv.data.target === 'player' ? pY - 30 : eY - 10;
+                            addDamageText(bX, y, `-${subEv.data.value}`);
                             triggerShake(subEv.data.target === 'player' ? 'player' : 'enemy');
                           }
-                          if (subEv.type === 'heal') addDamageText(50, window.innerHeight - 200, `+${subEv.data.value}`, '#10b981');
-                          if (subEv.type === 'shield') addDamageText(50, window.innerHeight - 200, `+🛡${subEv.data.value}`, '#3b82f6');
+                          if (subEv.type === 'heal') addDamageText(bX, pY - 30, `+${subEv.data.value}`, '#10b981');
+                          if (subEv.type === 'shield') addDamageText(bX, pY - 30, `+🛡${subEv.data.value}`, '#3b82f6');
                         }, si * 600);
                       });
                       return resultState;
@@ -1300,7 +1283,7 @@ function App() {
             </div>
             <div className="modal-grid">
               {gameState[showDiscard.owner].discard.map((card, i) => {
-                const isSelectable = discardSelectMode && Number(card.コスト) <= discardSelectMode.maxCost;
+                const isSelectable = discardSelectMode && Number(card.コスト) <= discardSelectMode.maxCost && (!discardSelectMode.excludeId || card.id !== discardSelectMode.excludeId);
                 return (
                   <div key={i} style={{ 
                     cursor: discardSelectMode ? (isSelectable ? 'pointer' : 'not-allowed') : 'pointer',
