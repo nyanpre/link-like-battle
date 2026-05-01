@@ -20,6 +20,7 @@ body {
   font-family: 'Inter', sans-serif;
   overflow: hidden;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   user-select: none;
   -webkit-user-select: none;
@@ -37,6 +38,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   position: relative;
 }
@@ -842,10 +844,37 @@ body {
   align-items: center;
   justify-content: center;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
   padding: 1rem;
   box-sizing: border-box;
+}
+
+.lobby-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  padding: 1rem;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+}
+
+.waiting-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  padding: 1rem;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
 }
 
 .name-input {
@@ -899,10 +928,10 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   background: #fcfcfc;
-  overflow-y: auto; /* Fix for scroll */
-  padding-bottom: 40rem;
+  overflow: hidden;
 }
 
 .deck-builder-header {
@@ -1018,6 +1047,8 @@ body {
   box-shadow: 0 4px 15px rgba(0,0,0,0.03);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .pool-list {
@@ -1026,6 +1057,26 @@ body {
   gap: 0.5rem;
   overflow-y: auto;
   padding-right: 0.5rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.deck-preview {
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.deck-list {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .pool-card {
@@ -1486,18 +1537,20 @@ body {
 
   /* Deck Builder Adjustments */
   .deck-builder-sticky-header {
-    padding-bottom: 2px !important;
+    padding-bottom: 0px !important;
   }
   .deck-builder-header {
-    padding: 0.2rem 0.5rem !important;
+    padding: 0.1rem 0.5rem !important;
   }
-  .deck-builder-title { font-size: 0.9rem !important; margin: 0; }
-  .deck-counter { font-size: 0.75rem !important; }
-  .unit-select-area, .starter-deck-area { padding: 0.2rem 0.5rem !important; gap: 0.4rem !important; }
-  .unit-btn { padding: 0.25rem 0.5rem !important; font-size: 0.7rem !important; }
-  .battle-start-btn { padding: 0.3rem 1rem !important; font-size: 0.85rem !important; }
-  .mana-curve { height: 35px !important; }
-  .deck-builder-body { gap: 0.8rem !important; padding: 0 1rem !important; }
+  .deck-builder-title { font-size: 0.8rem !important; margin: 0; }
+  .deck-counter { font-size: 0.7rem !important; padding: 0.1rem 0.5rem !important; }
+  .unit-select-area, .starter-deck-area { padding: 0.1rem 0.5rem !important; gap: 0.3rem !important; }
+  .unit-btn { padding: 0.15rem 0.3rem !important; font-size: 0.65rem !important; border-width: 1px !important; }
+  .battle-start-btn { padding: 0.2rem 0.8rem !important; font-size: 0.75rem !important; }
+  .mana-curve { height: 25px !important; }
+  .mana-label { font-size: 0.55rem !important; }
+  .mana-bar-count { font-size: 0.55rem !important; margin-bottom: 1px !important; }
+  .deck-builder-body { gap: 0.5rem !important; padding: 0 0.5rem !important; }
   .pool-list { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important; }
   .pool-card-name { font-size: 0.6rem !important; }
   
