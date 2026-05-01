@@ -242,11 +242,12 @@ export function applyCardEffects(state, card, isPlayer) {
     }
 
     if (effectText.includes("捨札からコスト4以下のカードを使用する") || effectText.includes("捨札からコスト4以下のカードを")) {
-      const candidates = user.discard.filter(c => (Number(c.コスト) || 0) <= 4);
+      // Dear my future自身(使用中のカード)は選べない
+      const candidates = user.discard.filter(c => (Number(c.コスト) || 0) <= 4 && c.id !== card.id);
       if (candidates.length > 0) {
         if (isPlayer) {
           // プレイヤーの場合はUIで選択させる（イベントで通知）
-          addEvent('discard_select', { maxCost: 4, reason: 'dear_my_future' });
+          addEvent('discard_select', { maxCost: 4, reason: 'dear_my_future', excludeId: card.id });
         } else {
           // CPUの場合はランダムに選択して効果発動
           const idx = Math.floor(Math.random() * candidates.length);
