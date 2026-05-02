@@ -310,7 +310,7 @@ export function applyCardEffects(state, card, isPlayer) {
        addEvent('draw', { count: 2, reason: 'unit_search' });
     }
 
-    if (effectText.includes("このターン、センターが「乙宗 梢」のカードを使用する度にカードを1枚引く")) {
+    if (effectText.includes("センターが「乙宗 梢」のカードを使用する度にカードを1枚引く")) {
       user.buffs.kozueDrawActive = true;
     }
     if (effectText.includes("センターが「村野 さやか」のカードを使用したとき、相手に3ダメージ") || effectText.includes("センターが「村野さやか」のカードを使用したとき、相手に3ダメージ")) {
@@ -354,16 +354,26 @@ export function applyCardEffects(state, card, isPlayer) {
         addEvent('sp_recover', {});
     }
     
-    if (effectText.includes("このターンの最初に使用した時")) {
+    const openingHealMatch = effectText.match(/このターンの最初に使用した(?:時|場合)、(\d+)ヒールする/);
+    if (openingHealMatch) {
       if (user.buffs.turnCardsPlayed.length === 1) { 
-        user.hp = Math.min(user.maxHp, user.hp + 2);
-        addEvent('heal', { value: 2, reason: 'opening' });
+        const healVal = parseInt(openingHealMatch[1], 10);
+        user.hp = Math.min(user.maxHp, user.hp + healVal);
+        addEvent('heal', { value: healVal, reason: 'opening' });
       }
+    }
+    
+    if (effectText.includes("このターン中、受けるダメージを2倍にする")) {
+      user.buffs.doubleDamageTakenThisTurn = true;
     }
   };
 
   function applyDamage(targetObj, value, eventAdder, type, isPlayerAction) {
     let dmg = value;
+    if (targetObj.buffs.doubleDamageTakenThisTurn) {
+      dmg *= 2;
+    }
+    let originalDmg = dmg;
     if (targetObj.shield > 0) {
       const blocked = Math.min(targetObj.shield, dmg);
       targetObj.shield -= blocked;
@@ -374,7 +384,7 @@ export function applyCardEffects(state, card, isPlayer) {
       targetObj.buffs.tookDamageThisTurn = true;
       targetObj.buffs.tookDamageAmount = (targetObj.buffs.tookDamageAmount || 0) + dmg;
     }
-    eventAdder('damage', { value, actual: dmg, target: isPlayerAction ? 'enemy' : 'player', type });
+    eventAdder('damage', { value: dmg, originalValue: originalDmg, target: isPlayerAction ? 'enemy' : 'player', type });
   }
 
   // --- メイン処理開始 ---
