@@ -392,7 +392,9 @@ function App() {
           tookDamageThisTurn: false,
           tookDamageAmount: 0,
           nextCardCostDown: 0,
-          turnCardsPlayed: []
+          turnCardsPlayed: [],
+          turnCardsPlayedDetails: [],
+          doubleDamageTakenThisTurn: false
         }
       };
 
@@ -1061,6 +1063,11 @@ function App() {
         </div>
 
         <div className="voltage-sidebar">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: '8px' }}>
+            <button className="btn-special" disabled style={{ transform: 'scale(0.8)', transformOrigin: 'right center', opacity: gameState.enemy.specialUsed ? 0.5 : 1, filter: gameState.enemy.specialUsed ? 'grayscale(100%)' : 'none' }}>
+              ENEMY SP
+            </button>
+          </div>
           <div className="voltage-group">
             <span className="voltage-label">Enemy Voltage</span>
             <div className="voltage-container" style={{ margin: 0 }}>
