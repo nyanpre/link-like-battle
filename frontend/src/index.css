@@ -10,6 +10,9 @@
   --glass-border: rgba(0, 0, 0, 0.08);
   --text-main: #1a1a1a;
   --text-muted: #555;
+  /* スマホのノッチ（カメラ部分）を避けるためのセーフティゾーン変数 */
+  --safe-left: max(7px, env(safe-area-inset-left));
+  --safe-right: max(7px, env(safe-area-inset-right));
 }
 
 body {
@@ -20,13 +23,8 @@ body {
   font-family: 'Inter', sans-serif;
   overflow: hidden;
   height: 100vh;
-  height: 100dvh;
   width: 100vw;
   user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  -webkit-text-size-adjust: 100%;
-  -ms-text-size-adjust: 100%;
 }
 
 #root {
@@ -34,12 +32,18 @@ body {
   width: 100%;
 }
 
+/* 全画面コンテナにセーフティゾーンを適用 */
+.game-container, .deck-builder-screen, .home-screen, .lobby-screen, .waiting-screen {
+  padding-left: var(--safe-left) !important;
+  padding-right: var(--safe-right) !important;
+  box-sizing: border-box;
+  width: 100vw;
+}
+
 .game-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  height: 100dvh;
-  width: 100vw;
   position: relative;
 }
 
@@ -59,7 +63,7 @@ body {
   border: 1px solid var(--glass-border);
   border-radius: 0.8rem;
   padding: 0.75rem 1rem;
-  width: 145px; /* Exactly 5px wider than before (140px) */
+  width: 145px;
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -70,14 +74,15 @@ body {
 .enemy-status {
   position: absolute;
   top: 4rem;
-  left: 2rem;
+  /* 絶対配置にもセーフティゾーンを加算 */
+  left: calc(2rem + var(--safe-left)) !important;
   transform: scale(1);
 }
 
 .self-status {
   position: absolute;
   bottom: 4rem;
-  left: 2rem;
+  left: calc(2rem + var(--safe-left)) !important;
 }
 
 .hp-bar-container {
@@ -123,7 +128,7 @@ body {
 
 .voltage-sidebar {
   position: absolute;
-  right: 1.5rem;
+  right: calc(1.5rem + var(--safe-right)) !important;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -142,10 +147,11 @@ body {
 
 .voltage-label {
   font-family: 'Outfit', sans-serif;
-  font-size: 0.7rem;
+  font-size: 0.6rem; /* はみ出し防止のため縮小 */
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  white-space: nowrap; /* 強制改行を防止 */
 }
 
 /* Card Styling */
@@ -308,7 +314,7 @@ body {
 
 .action-container {
   position: absolute;
-  right: 2rem;
+  right: calc(2rem + var(--safe-right)) !important;
   bottom: 2rem;
   display: flex;
   flex-direction: row;
@@ -373,7 +379,7 @@ body {
 }
 
 .modal-overlay {
-  position: absolute;
+  position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.8);
   z-index: 2000;
@@ -465,11 +471,11 @@ body {
   color: #000;
   text-align: center;
   padding: 1rem;
-  font-size: 3rem;
+  font-size: 2.5rem; /* スマホでのはみ出し防止 */
   font-family: 'Outfit', sans-serif;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 5px;
+  letter-spacing: 3px;
   z-index: 1000;
   animation: banner-slide 2s forwards;
   pointer-events: none;
@@ -546,7 +552,7 @@ body {
 /* Mobile Responsive Adjustments */
 @media (max-width: 768px) {
   .player-status {
-    width: 175px; /* Exactly 5px wider than before (170px) */
+    width: 175px;
     padding: 0.5rem 0.6rem;
   }
   
@@ -620,7 +626,6 @@ body {
   }
 
   .action-container {
-    right: 1%;
     transform: scale(0.75) translateY(-50%);
     transform-origin: right center;
   }
@@ -807,7 +812,6 @@ body {
   align-items: center;
   justify-content: center;
   height: 100vh;
-  width: 100vw;
   background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
 }
 
@@ -828,77 +832,13 @@ body {
 
 .title-link { color: var(--primary); }
 .title-like { color: var(--accent); }
-.title-battle { color: var(--secondary); }
+.title-battle { color: var(--secondary); font-size: 5rem; }
 
 .title-subtitle {
-  font-size: 1rem;
+  font-size: 1.2rem;
   color: var(--text-muted);
-  margin-bottom: 1rem;
+  margin-bottom: 3rem;
   font-weight: 600;
-}
-
-/* Home Screen */
-.home-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  height: 100dvh;
-  width: 100vw;
-  background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-  padding: 1rem;
-  box-sizing: border-box;
-}
-
-.lobby-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  height: 100dvh;
-  width: 100vw;
-  padding: 1rem;
-  box-sizing: border-box;
-  background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-}
-
-.waiting-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  height: 100dvh;
-  width: 100vw;
-  padding: 1rem;
-  box-sizing: border-box;
-  background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-}
-
-.name-input {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.9rem;
-  padding: 0.5rem 1rem;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  text-align: center;
-  width: 200px;
-  margin-bottom: 0.8rem;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.name-input:focus {
-  border-color: var(--primary);
-}
-
-.mode-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  align-items: center;
 }
 
 .title-start-btn {
@@ -908,8 +848,8 @@ body {
   background: var(--primary);
   color: white;
   border: none;
-  padding: 0.7rem 2rem;
-  font-size: 1.1rem;
+  padding: 1rem 2.5rem;
+  font-size: 1.5rem;
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
   border-radius: 50px;
@@ -928,10 +868,9 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  height: 100dvh;
-  width: 100vw;
   background: #fcfcfc;
-  overflow: hidden;
+  overflow-y: auto; 
+  padding-bottom: 5rem !important; /* 空白を圧縮 */
 }
 
 .deck-builder-header {
@@ -978,7 +917,7 @@ body {
   align-items: center;
   gap: 1rem;
   padding: 0.3rem 1rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* 縦並び回避 */
 }
 
 .unit-label {
@@ -1026,8 +965,8 @@ body {
 
 .deck-builder-body {
   display: flex;
-  gap: 2rem;
-  padding: 0 2rem;
+  gap: 1rem !important; /* 間隔を詰める */
+  padding: 0.5rem 1rem 1rem 1rem !important; /* 上部の空白を削減 */
   flex: 1;
   min-height: 0;
 }
@@ -1043,12 +982,10 @@ body {
   flex: 2;
   background: white;
   border-radius: 12px;
-  padding: 1rem;
+  padding: 0.5rem 1rem !important; /* 空白圧縮 */
   box-shadow: 0 4px 15px rgba(0,0,0,0.03);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
 }
 
 .pool-list {
@@ -1057,26 +994,6 @@ body {
   gap: 0.5rem;
   overflow-y: auto;
   padding-right: 0.5rem;
-  flex: 1;
-  min-height: 0;
-}
-
-.deck-preview {
-  flex: 1;
-  background: white;
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.deck-list {
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
 }
 
 .pool-card {
@@ -1183,12 +1100,18 @@ body {
   flex-direction: column;
   background: white;
   border-radius: 12px;
-  padding: 1rem;
+  padding: 0.5rem 1rem !important; /* 空白圧縮 */
   box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
+.pool-title {
+  margin-top: 0 !important;
+  margin-bottom: 0.4rem !important;
+  font-size: 0.9rem !important;
+}
+
 .mana-curve-wrapper {
-  margin: 0.2rem 0 0.3rem 0;
+  margin: 0;
   width: 100%;
 }
 
@@ -1432,14 +1355,12 @@ body {
 @media (max-height: 480px) {
   .enemy-status {
     top: 0.5rem;
-    left: 0.5rem;
     transform: scale(0.75);
     transform-origin: top left;
   }
 
   .self-status {
     bottom: 2.5rem;
-    left: 0.5rem;
     margin-bottom: 0 !important;
     transform: scale(0.75);
     transform-origin: bottom left;
@@ -1493,7 +1414,6 @@ body {
   }
 
   .action-container {
-    right: 0.5rem;
     bottom: 2.5rem;
     gap: 0.5rem;
     transform: scale(0.65);
@@ -1501,7 +1421,6 @@ body {
   }
 
   .voltage-sidebar {
-    right: 0.5rem;
     gap: 0.5rem;
     transform: translateY(-50%) scale(0.65);
     transform-origin: right center;
@@ -1513,44 +1432,32 @@ body {
   }
 
   .title-logo {
-    font-size: 1.8rem;
+    font-size: 2.5rem;
     line-height: 1.1;
-    margin-bottom: 0.3rem !important;
   }
   .title-subtitle {
-    font-size: 0.75rem;
-    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
   }
   .title-start-btn {
-    padding: 0.5rem 1.5rem;
-    font-size: 0.85rem;
-  }
-  .name-input {
-    font-size: 0.75rem;
-    padding: 0.35rem 0.8rem;
-    width: 160px;
-    margin-bottom: 0.5rem;
-  }
-  .mode-buttons {
-    gap: 0.4rem;
+    padding: 0.8rem 2rem;
+    font-size: 1.2rem;
   }
 
   /* Deck Builder Adjustments */
   .deck-builder-sticky-header {
-    padding-bottom: 0px !important;
+    padding-bottom: 2px !important;
   }
   .deck-builder-header {
-    padding: 0.1rem 0.5rem !important;
+    padding: 0.2rem 0.5rem !important;
   }
-  .deck-builder-title { font-size: 0.8rem !important; margin: 0; }
-  .deck-counter { font-size: 0.7rem !important; padding: 0.1rem 0.5rem !important; }
-  .unit-select-area, .starter-deck-area { padding: 0.1rem 0.5rem !important; gap: 0.3rem !important; }
-  .unit-btn { padding: 0.15rem 0.3rem !important; font-size: 0.65rem !important; border-width: 1px !important; }
-  .battle-start-btn { padding: 0.2rem 0.8rem !important; font-size: 0.75rem !important; }
-  .mana-curve { height: 25px !important; }
-  .mana-label { font-size: 0.55rem !important; }
-  .mana-bar-count { font-size: 0.55rem !important; margin-bottom: 1px !important; }
-  .deck-builder-body { gap: 0.5rem !important; padding: 0 0.5rem !important; }
+  .deck-builder-title { font-size: 0.9rem !important; margin: 0; }
+  .deck-counter { font-size: 0.75rem !important; }
+  .unit-select-area, .starter-deck-area { padding: 0.2rem 0.5rem !important; gap: 0.4rem !important; }
+  .unit-btn { padding: 0.25rem 0.5rem !important; font-size: 0.7rem !important; }
+  .battle-start-btn { padding: 0.3rem 1rem !important; font-size: 0.85rem !important; }
+  .mana-curve { height: 35px !important; }
+  .deck-builder-body { gap: 0.8rem !important; padding: 0 1rem !important; }
   .pool-list { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important; }
   .pool-card-name { font-size: 0.6rem !important; }
   
