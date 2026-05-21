@@ -11,7 +11,7 @@
   --text-main: #1a1a1a;
   --text-muted: #555;
   /* スマホのノッチ（カメラ部分）を避けるためのセーフティゾーン変数 */
-  --safe-left: max(7px, env(safe-area-inset-left));
+  --safe-left: max(2px, env(safe-area-inset-left));
   --safe-right: max(7px, env(safe-area-inset-right));
 }
 
