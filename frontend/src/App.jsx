@@ -1,19 +1,16 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect, useRef } from 'react';
-import { Shield, Plus, Minus, Zap, HeartPulse, Swords, Layers, Trash2, X, ChevronRight, Play, Smartphone, RefreshCw } from 'lucide-react';
+import { Shield, Plus, Minus, Zap, HeartPulse, Swords, Layers, Trash2, X, ChevronRight, Play, Smartphone } from 'lucide-react';
 import { createInitialState, getAvailableCards, buildDeckFromList, STARTER_DECKS, generateCPUDeck, createOnlineInitialState } from './utils/gameLogic';
 import { getCalculatedCost, applyCardEffects, drawCard as engineDrawCard } from './utils/battleEngine';
 import cardData from './data.json';
 import './index.css';
 import { createRoom, watchRoomsList, joinRoom, setClientReady, startGameInDB, watchRoom, updateGameStateToDB, deleteRoom } from './utils/firebase';
 
-// ターン表.csv準拠: グローバルターン番号(1-indexed)でボルテージとドローを管理
 const VOLTAGE_FIRST = [0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
 const VOLTAGE_SECOND = [0,2,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
-// 先攻ドロー: 奇数ターン(1,3,5,...)で1枚、偶数ターンで0
-// 後攻ドロー: 偶数ターン(2,4,6,...)で1枚、奇数ターンで0
-const DRAW_FIRST = (turn) => (turn % 2 === 1) ? 1 : 0;  // 先攻は奇数ターンにドロー
-const DRAW_SECOND = (turn) => (turn % 2 === 0) ? 1 : 0; // 後攻は偶数ターンにドロー
+const DRAW_FIRST = (turn) => (turn % 2 === 1) ? 1 : 0;
+const DRAW_SECOND = (turn) => (turn % 2 === 0) ? 1 : 0;
 
 function getVoltage(isFirstPlayer, globalTurn) {
   const table = isFirstPlayer ? VOLTAGE_FIRST : VOLTAGE_SECOND;
@@ -25,7 +22,6 @@ function getDrawCount(isFirstPlayer, globalTurn) {
   return isFirstPlayer ? DRAW_FIRST(globalTurn) : DRAW_SECOND(globalTurn);
 }
 
-// 歌唱ユニットに基づくカード背景色（不透過）
 function getCardBackground(singing) {
   if (!singing) return '#c8c8c8';
   if (singing.includes('スリーズブーケ') && singing.includes('DOLLCHESTRA') && singing.includes('みらくらぱーく')) {
@@ -40,25 +36,22 @@ function getCardBackground(singing) {
   if (singing.includes('みらくらぱーく')) {
     return '#fff0b3';
   }
-  // 蓮ノ空女学院スクールアイドルクラブ など
   return '#EEEEEE';
 }
 
 
 function App() {
-  const [screen, setScreen] = useState('home'); // 'home' | 'deckBuilder' | 'lobby' | 'waitingRoom' | 'battle'
+  const [screen, setScreen] = useState('home');
   const [playerName, setPlayerName] = useState('');
-  const [gameMode, setGameMode] = useState(null); // 'cpu' | 'online'
+  const [gameMode, setGameMode] = useState(null);
 
   const [selectedUnit, setSelectedUnit] = useState(null);
-  const [deckList, setDeckList] = useState({}); // { cardName: count }
+  const [deckList, setDeckList] = useState({});
   const [gameState, setGameState] = useState(null);
   const [damageTexts, setDamageTexts] = useState([]);
   const [showDiscard, setShowDiscard] = useState({ show: false, owner: null });
   const [selectedCard, setSelectedCard] = useState(null);
-  const [discardSelectMode, setDiscardSelectMode] = useState(null); // { reason: 'dear_my_future', maxCost: 4, callback: fn }
   
-  // 通信対戦用ステート
   const [roomId, setRoomId] = useState('');
   const [isHost, setIsHost] = useState(false);
   const [roomsList, setRoomsList] = useState([]);
@@ -67,7 +60,6 @@ function App() {
   const cpuTurnRef = useRef(null);
   const unsubscribeRoomRef = useRef(null);
 
-  // ロビーの部屋一覧を監視
   useEffect(() => {
     if (screen === 'lobby') {
       const unsub = watchRoomsList((rooms) => setRoomsList(rooms));
@@ -75,20 +67,17 @@ function App() {
     }
   }, [screen]);
 
-  // 待機室・バトルの監視（同時遷移の核）
   useEffect(() => {
     if (!roomId || (screen !== 'waitingRoom' && screen !== 'battle')) return;
     
     unsubscribeRoomRef.current = watchRoom(roomId, (data) => {
       if (!data) return;
-      setRoomData(data); // 待機室のUI更新用
+      setRoomData(data);
 
-      // ホストがゲームを開始し、状態が'playing'になったら「両者同時」に画面を切り替える
       if (data.status === 'playing' && data.gameState) {
         if (isHost) {
           setGameState(data.gameState);
         } else {
-          // クライアントは、送られてきたデータの敵・味方を反転させて適用する
           const flippedState = {
             ...data.gameState,
             player: data.gameState.enemy,
@@ -111,7 +100,6 @@ function App() {
     };
   }, [roomId, isHost, screen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ===== デッキビルダー用ロジック =====
   const availableCards = selectedUnit ? getAvailableCards(selectedUnit) : [];
   const deckTotal = Object.values(deckList).reduce((s, n) => s + n, 0);
 
@@ -145,7 +133,6 @@ function App() {
     setDeckList(counts);
   };
 
-  // デッキ作成完了時の分岐
   const handleDeckComplete = () => {
     if (gameMode === 'cpu') {
       const playerCardNames = [];
@@ -166,15 +153,15 @@ function App() {
     }
   };
 
-  // ===== 通信対戦ロジック =====
   const handleCreateRoom = async () => {
     try {
       const playerCardNames = [];
       Object.entries(deckList).forEach(([name, count]) => {
         for (let i = 0; i < count; i++) playerCardNames.push(name);
       });
+      const playerDeck = buildDeckFromList(playerCardNames);
       
-      const newRoomId = await createRoom({ deckNames: playerCardNames, unit: selectedUnit }, playerName);
+      const newRoomId = await createRoom({ deck: playerDeck, unit: selectedUnit }, playerName);
       setRoomId(newRoomId);
       setIsHost(true);
       setScreen('waitingRoom');
@@ -189,8 +176,9 @@ function App() {
       Object.entries(deckList).forEach(([name, count]) => {
         for (let i = 0; i < count; i++) playerCardNames.push(name);
       });
+      const playerDeck = buildDeckFromList(playerCardNames);
       
-      await joinRoom(id, { deckNames: playerCardNames, unit: selectedUnit }, playerName);
+      await joinRoom(id, { deck: playerDeck, unit: selectedUnit }, playerName);
       setRoomId(id);
       setIsHost(false);
       setScreen('waitingRoom');
@@ -201,28 +189,13 @@ function App() {
 
   const handleHostStartGame = async () => {
     if (!roomData || !roomData.clientDeck) return;
-    // Firebaseからのデータはカード名リストなので、ここでデッキを再構築
-    const hostNames = Array.isArray(roomData.hostDeck.deckNames) 
-      ? roomData.hostDeck.deckNames 
-      : Object.values(roomData.hostDeck.deckNames || {});
-    const clientNames = Array.isArray(roomData.clientDeck.deckNames)
-      ? roomData.clientDeck.deckNames
-      : Object.values(roomData.clientDeck.deckNames || {});
-    
-    const hostDeckCards = buildDeckFromList(hostNames);
-    const clientDeckCards = buildDeckFromList(clientNames);
-    
-    const initialState = createOnlineInitialState(
-      { deck: hostDeckCards, unit: roomData.hostDeck.unit },
-      { deck: clientDeckCards, unit: roomData.clientDeck.unit }
-    );
+    const initialState = createOnlineInitialState(roomData.hostDeck, roomData.clientDeck);
     initialState.player.name = roomData.hostName || 'YOU';
     initialState.enemy.name = roomData.clientName || '相手';
     await startGameInDB(roomId, initialState);
   };
 
-  // マナカーブの計算
-  const manaCurve = [0, 0, 0, 0, 0, 0, 0, 0]; // 0〜6, 7以上
+  const manaCurve = [0, 0, 0, 0, 0, 0, 0, 0];
   Object.entries(deckList).forEach(([name, count]) => {
     const card = cardData.find(c => c.曲名 === name);
     const cost = Math.min(Number(card?.コスト) || 0, 7);
@@ -230,9 +203,6 @@ function App() {
   });
   const maxManaCount = Math.max(1, ...manaCurve);
 
-  // ===== バトル画面 =====
-
-  // コイントスフェーズの処理
   useEffect(() => {
     if (!gameState) return;
     if (gameState.isCoinFlipPhase) {
@@ -246,22 +216,10 @@ function App() {
         setGameState(prev => {
           if (!prev) return prev;
           const newPlayer = {
-            ...prev.player,
-            isFirstPlayer: playerGoesFirst,
-            maxVoltage: playerVoltage,
-            currentVoltage: playerVoltage,
-            deck: [...prev.player.deck],
-            hand: [...prev.player.hand],
-            discard: [...prev.player.discard],
+            ...prev.player, isFirstPlayer: playerGoesFirst, maxVoltage: playerVoltage, currentVoltage: playerVoltage, deck: [...prev.player.deck], hand: [...prev.player.hand], discard: [...prev.player.discard],
           };
           const newEnemy = {
-            ...prev.enemy,
-            isFirstPlayer: !playerGoesFirst,
-            maxVoltage: enemyVoltage,
-            currentVoltage: enemyVoltage,
-            deck: [...prev.enemy.deck],
-            hand: [...prev.enemy.hand],
-            discard: [...prev.enemy.discard],
+            ...prev.enemy, isFirstPlayer: !playerGoesFirst, maxVoltage: enemyVoltage, currentVoltage: enemyVoltage, deck: [...prev.enemy.deck], hand: [...prev.enemy.hand], discard: [...prev.enemy.discard],
           };
           for (let i = 0; i < playerDraw; i++) {
             if (newPlayer.deck.length > 0) {
@@ -278,20 +236,15 @@ function App() {
             }
           }
           return {
-            ...prev,
-            turn: 1,
-            isCoinFlipPhase: false,
-            isPlayerTurn: playerGoesFirst,
+            ...prev, turn: 1, isCoinFlipPhase: false, isPlayerTurn: playerGoesFirst,
             turnBanner: playerGoesFirst ? "YOU FIRST!" : (gameMode === 'cpu' ? "CPU FIRST!" : "ENEMY FIRST!"),
-            player: newPlayer,
-            enemy: newEnemy,
+            player: newPlayer, enemy: newEnemy,
           };
         });
       }, 2000);
     }
   }, [gameState?.isCoinFlipPhase, gameMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Turn Start logic Banner Clear
   useEffect(() => {
     if (!gameState) return;
     if (!gameState.isCoinFlipPhase && gameState.turnBanner) {
@@ -304,26 +257,14 @@ function App() {
   const addDamageText = (x, y, text, color = '#ef4444', cssClass = 'damage-text') => {
     const id = Math.random();
     setDamageTexts(prev => [...prev, { id, x, y, text, color, cssClass }]);
-    setTimeout(() => {
-      setDamageTexts(prev => prev.filter(dt => dt.id !== id));
-    }, 1200);
+    setTimeout(() => { setDamageTexts(prev => prev.filter(dt => dt.id !== id)); }, 1200);
   };
 
-  const addDrawEffect = (x, y, text) => {
-    addDamageText(x, y, text, '#3b82f6', 'draw-effect-text');
-  };
+  const addDrawEffect = (x, y, text) => { addDamageText(x, y, text, '#3b82f6', 'draw-effect-text'); };
 
   const triggerShake = (target) => {
-    setGameState(prev => ({
-      ...prev,
-      animations: { ...prev.animations, [`${target}Shake`]: true }
-    }));
-    setTimeout(() => {
-      setGameState(prev => ({
-        ...prev,
-        animations: { ...prev.animations, [`${target}Shake`]: false }
-      }));
-    }, 500);
+    setGameState(prev => ({ ...prev, animations: { ...prev.animations, [`${target}Shake`]: true } }));
+    setTimeout(() => { setGameState(prev => ({ ...prev, animations: { ...prev.animations, [`${target}Shake`]: false } })); }, 500);
   };
 
   const drawCard = (userState, ownerStr) => {
@@ -333,106 +274,43 @@ function App() {
       return false;
     }
     const card = userState.deck.shift();
-    if (userState.hand.length >= 8) {
-      userState.discard.push(card);
-    } else {
-      userState.hand.push(card);
-    }
+    if (userState.hand.length >= 8) { userState.discard.push(card); } else { userState.hand.push(card); }
     return true;
   };
 
   const startTurn = (isPlayer) => {
     setGameState(prev => {
-      // グローバルターンを進める
       const nextGlobalTurn = prev.turn + 1;
-
-      // ターン終了時処理 (前ターンのバフリセット)
       const prevTarget = isPlayer ? prev.enemy : prev.player;
       const newPrevTarget = {
         ...prevTarget,
-        buffs: {
-            ...prevTarget.buffs,
-            damageImmune: false,
-            kozueDrawActive: false,
-            sayakaDmgActive: false,
-            doubleNextEffect: false,
-            onyourmark102Active: false,
-            yupYupYupActive: false,
-            damageReflectionActive: false,
-            tookDamageThisTurn: false,
-            tookDamageAmount: 0,
-            tookDamageCount: 0,
-            turnCardsPlayed: []
-        }
+        buffs: { ...prevTarget.buffs, damageImmune: false, kozueDrawActive: false, sayakaDmgActive: false, doubleNextEffect: false, onyourmark102Active: false, yupYupYupActive: false, damageReflectionActive: false, tookDamageThisTurn: false, tookDamageAmount: 0, tookDamageCount: 0, turnCardsPlayed: [] }
       };
       
       const target = isPlayer ? prev.player : prev.enemy;
       const amIFirstPlayer = target.isFirstPlayer === true;
-      
-      // ターン表.csv準拠: グローバルターン番号でテーブル参照
       const newMax = getVoltage(amIFirstPlayer, nextGlobalTurn);
       const drawCount = getDrawCount(amIFirstPlayer, nextGlobalTurn);
       
       let newTarget = {
-        ...target,
-        maxVoltage: newMax,
-        currentVoltage: newMax,
-        deck: [...target.deck],
-        hand: [...target.hand],
-        discard: [...target.discard],
-        buffs: {
-          ...target.buffs,
-          damageImmune: false,
-          kozueDrawActive: false,
-          sayakaDmgActive: false,
-          doubleNextEffect: false,
-          onyourmark102Active: false,
-          yupYupYupActive: false,
-          damageReflectionActive: false,
-          tookDamageThisTurn: false,
-          tookDamageAmount: 0,
-          nextCardCostDown: 0,
-          turnCardsPlayed: [],
-          turnCardsPlayedDetails: [],
-          doubleDamageTakenThisTurn: false
-        }
+        ...target, maxVoltage: newMax, currentVoltage: newMax, deck: [...target.deck], hand: [...target.hand], discard: [...target.discard],
+        buffs: { ...target.buffs, damageImmune: false, kozueDrawActive: false, sayakaDmgActive: false, doubleNextEffect: false, onyourmark102Active: false, yupYupYupActive: false, damageReflectionActive: false, tookDamageThisTurn: false, tookDamageAmount: 0, nextCardCostDown: 0, turnCardsPlayed: [] }
       };
 
-      // デバフ: ドロー禁止
       if (newTarget.buffs.cannotDrawNextTurn) {
         newTarget.buffs.cannotDrawNextTurn = false;
         return {
-          ...prev,
-          isPlayerTurn: isPlayer,
-          turnBanner: isPlayer ? "YOUR TURN (NO DRAW)" : (gameMode === 'cpu' ? "CPU TURN (NO DRAW)" : "ENEMY TURN (NO DRAW)"),
-          setlist: [], 
-          enemyPlayedCard: null,
-          player: isPlayer ? newTarget : newPrevTarget,
-          enemy: isPlayer ? newPrevTarget : newTarget,
-          turn: nextGlobalTurn
+          ...prev, isPlayerTurn: isPlayer, turnBanner: isPlayer ? "YOUR TURN (NO DRAW)" : (gameMode === 'cpu' ? "CPU TURN (NO DRAW)" : "ENEMY TURN (NO DRAW)"),
+          setlist: [], enemyPlayedCard: null, player: isPlayer ? newTarget : newPrevTarget, enemy: isPlayer ? newPrevTarget : newTarget, turn: nextGlobalTurn
         };
       }
       
-      // デバフ: 前ターンに「次の相手のターン、相手のボルテージが3になる」を使われていたら
-      if (newPrevTarget.buffs.setEnemyVoltage3) {
-        newTarget.currentVoltage = 3;
-        newPrevTarget.buffs.setEnemyVoltage3 = false;
-      }
-      
-      // テーブルに基づくドロー
-      for (let i = 0; i < drawCount; i++) {
-        drawCard(newTarget, isPlayer ? 'player' : 'enemy');
-      }
+      if (newPrevTarget.buffs.setEnemyVoltage3) { newTarget.currentVoltage = 3; newPrevTarget.buffs.setEnemyVoltage3 = false; }
+      for (let i = 0; i < drawCount; i++) { drawCard(newTarget, isPlayer ? 'player' : 'enemy'); }
       
       return {
-        ...prev,
-        isPlayerTurn: isPlayer,
-        turnBanner: isPlayer ? "YOUR TURN" : (gameMode === 'cpu' ? "CPU TURN" : "ENEMY TURN"),
-        setlist: [], 
-        enemyPlayedCard: null,
-        player: isPlayer ? newTarget : newPrevTarget,
-        enemy: isPlayer ? newPrevTarget : newTarget,
-        turn: nextGlobalTurn
+        ...prev, isPlayerTurn: isPlayer, turnBanner: isPlayer ? "YOUR TURN" : (gameMode === 'cpu' ? "CPU TURN" : "ENEMY TURN"),
+        setlist: [], enemyPlayedCard: null, player: isPlayer ? newTarget : newPrevTarget, enemy: isPlayer ? newPrevTarget : newTarget, turn: nextGlobalTurn
       };
     });
   };
@@ -440,42 +318,36 @@ function App() {
   const endTurnPlayer = () => {
     if (!gameState.isPlayerTurn || gameState.player.hp <= 0 || gameState.enemy.hp <= 0) return;
 
-    // Yup! Yup! Yup! ドロー
     if (gameState.player.buffs.yupYupYupActive) {
       setGameState(prev => {
         const next = { ...prev, player: { ...prev.player, hand: [...prev.player.hand], deck: [...prev.player.deck], discard: [...prev.player.discard] } };
-        for (let i = 0; i < prev.player.currentVoltage; i++) {
-          engineDrawCard(next.player);
-        }
+        for (let i = 0; i < prev.player.currentVoltage; i++) { engineDrawCard(next.player); }
         return next;
       });
     }
 
-    // queuedEndTurnEffects を処理（マハラジャンボリー等のターン終了時効果）
     setGameState(prev => {
       const queued = prev.player.buffs.queuedEndTurnEffects;
       if (!queued || queued.length === 0) return prev;
       
-      const newPlayer = {
-        ...prev.player,
-        deck: [...prev.player.deck],
-        hand: [...prev.player.hand],
-        discard: [...prev.player.discard],
-        buffs: { ...prev.player.buffs, queuedEndTurnEffects: [] }
-      };
+      const newPlayer = { ...prev.player, deck: [...prev.player.deck], hand: [...prev.player.hand], discard: [...prev.player.discard], buffs: { ...prev.player.buffs, queuedEndTurnEffects: [] } };
       
       queued.forEach(effect => {
         if (effect.type === 'draw_voltage') {
-          for (let i = 0; i < newPlayer.currentVoltage; i++) {
-            engineDrawCard(newPlayer);
-          }
+          for (let i = 0; i < newPlayer.currentVoltage; i++) { engineDrawCard(newPlayer); }
         } else if (effect.type === 'draw_specific' && effect.name) {
-          // デッキから特定のカードを探してドロー（デッキにない場合は何もしない）
           const idx = newPlayer.deck.findIndex(c => c.曲名 === effect.name);
           if (idx !== -1) {
             const [found] = newPlayer.deck.splice(idx, 1);
             if (newPlayer.hand.length >= 8) newPlayer.discard.push(found);
             else newPlayer.hand.push(found);
+          } else {
+            const dIdx = newPlayer.discard.findIndex(c => c.曲名 === effect.name);
+            if (dIdx !== -1) {
+              const [found] = newPlayer.discard.splice(dIdx, 1);
+              if (newPlayer.hand.length >= 8) newPlayer.discard.push(found);
+              else newPlayer.hand.push(found);
+            }
           }
         } else if (effect.type === 'heal' && effect.value) {
           newPlayer.hp = Math.min(newPlayer.maxHp, newPlayer.hp + effect.value);
@@ -485,22 +357,26 @@ function App() {
       return { ...prev, player: newPlayer };
     });
 
+    setGameState(prev => {
+      const lastPlayed = prev.setlist[prev.setlist.length - 1];
+      if (lastPlayed && lastPlayed.owner === 'player' && lastPlayed.card.曲名 === 'Dream Believers') {
+        const deckIdx = prev.player.deck.findIndex(c => c.曲名 === 'Dream Believers');
+        if (deckIdx !== -1) {
+          const newPlayer = { ...prev.player, deck: [...prev.player.deck], hand: [...prev.player.hand] };
+          const [dbCard] = newPlayer.deck.splice(deckIdx, 1);
+          newPlayer.hand.push(dbCard);
+          return { ...prev, player: newPlayer };
+        }
+      }
+      return prev;
+    });
     startTurn(false);
   };
 
-  // 使えるカードがなくなったら自動ターンエンド（SPも使用済みの場合）
   useEffect(() => {
     if (!gameState) return;
-    if (
-      gameState.isPlayerTurn &&
-      !gameState.isCoinFlipPhase &&
-      !gameState.turnBanner &&
-      gameState.player.hp > 0 &&
-      gameState.enemy.hp > 0
-    ) {
-      const hasPlayable = gameState.player.hand.some(
-        c => gameState.player.currentVoltage >= getCalculatedCost(c, gameState.player)
-      );
+    if (gameState.isPlayerTurn && !gameState.isCoinFlipPhase && !gameState.turnBanner && gameState.player.hp > 0 && gameState.enemy.hp > 0) {
+      const hasPlayable = gameState.player.hand.some(c => gameState.player.currentVoltage >= getCalculatedCost(c, gameState.player));
       const canUseSP = !gameState.player.specialUsed;
       if (!hasPlayable && !canUseSP) {
         const t = setTimeout(() => endTurnPlayer(), 800);
@@ -509,13 +385,10 @@ function App() {
     }
   }, [gameState?.isPlayerTurn, gameState?.player?.currentVoltage, gameState?.player?.hand?.length, gameState?.player?.specialUsed, gameState?.turnBanner, gameState?.isCoinFlipPhase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Enemy CPU logic
   useEffect(() => {
     if (!gameState || gameMode !== 'cpu') return;
     if (!gameState.isCoinFlipPhase && !gameState.isPlayerTurn && gameState.enemy.hp > 0 && gameState.player.hp > 0 && !gameState.turnBanner) {
-      cpuTurnRef.current = setTimeout(() => {
-        playEnemyTurn();
-      }, 1500);
+      cpuTurnRef.current = setTimeout(() => { playEnemyTurn(); }, 1500);
       return () => clearTimeout(cpuTurnRef.current);
     }
   }, [gameState?.isPlayerTurn, gameState?.enemy?.currentVoltage, gameState?.turnBanner, gameState?.isCoinFlipPhase, gameMode]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -528,40 +401,35 @@ function App() {
       const cardToPlay = affordable[Math.floor(Math.random() * affordable.length)];
       playCard(cardToPlay, false);
     } else {
-      // Yup! Yup! Yup! ドロー
       if (enemy.buffs.yupYupYupActive) {
         setGameState(prev => {
           const next = { ...prev, enemy: { ...prev.enemy, hand: [...prev.enemy.hand], deck: [...prev.enemy.deck], discard: [...prev.enemy.discard] } };
-          for (let i = 0; i < prev.enemy.currentVoltage; i++) {
-            engineDrawCard(next.enemy);
-          }
+          for (let i = 0; i < prev.enemy.currentVoltage; i++) { engineDrawCard(next.enemy); }
           return next;
         });
       }
-      // queuedEndTurnEffects を処理（CPU側）
       setGameState(prev => {
         const queued = prev.enemy.buffs.queuedEndTurnEffects;
         if (!queued || queued.length === 0) return prev;
         
-        const newEnemy = {
-          ...prev.enemy,
-          deck: [...prev.enemy.deck],
-          hand: [...prev.enemy.hand],
-          discard: [...prev.enemy.discard],
-          buffs: { ...prev.enemy.buffs, queuedEndTurnEffects: [] }
-        };
+        const newEnemy = { ...prev.enemy, deck: [...prev.enemy.deck], hand: [...prev.enemy.hand], discard: [...prev.enemy.discard], buffs: { ...prev.enemy.buffs, queuedEndTurnEffects: [] } };
         
         queued.forEach(effect => {
           if (effect.type === 'draw_voltage') {
-            for (let i = 0; i < newEnemy.currentVoltage; i++) {
-              engineDrawCard(newEnemy);
-            }
+            for (let i = 0; i < newEnemy.currentVoltage; i++) { engineDrawCard(newEnemy); }
           } else if (effect.type === 'draw_specific' && effect.name) {
             const idx = newEnemy.deck.findIndex(c => c.曲名 === effect.name);
             if (idx !== -1) {
               const [found] = newEnemy.deck.splice(idx, 1);
               if (newEnemy.hand.length >= 8) newEnemy.discard.push(found);
               else newEnemy.hand.push(found);
+            } else {
+              const dIdx = newEnemy.discard.findIndex(c => c.曲名 === effect.name);
+              if (dIdx !== -1) {
+                const [found] = newEnemy.discard.splice(dIdx, 1);
+                if (newEnemy.hand.length >= 8) newEnemy.discard.push(found);
+                else newEnemy.hand.push(found);
+              }
             }
           } else if (effect.type === 'heal' && effect.value) {
             newEnemy.hp = Math.min(newEnemy.maxHp, newEnemy.hp + effect.value);
@@ -584,7 +452,6 @@ function App() {
       };
       const user = isPlayer ? newState.player : newState.enemy;
 
-      // --- コスト計算 ---
       let cost = getCalculatedCost(card, user);
       if (user.currentVoltage < cost) return prev;
       
@@ -593,6 +460,7 @@ function App() {
       user.hand = user.hand.filter(c => c.id !== card.id);
       user.discard.push(card);
       newState.setlist.push({ card, owner: isPlayer ? 'player' : 'enemy' });
+      user.buffs.turnCardsPlayed.push(card.曲名);
       
       newState.enemyPlayedCard = !isPlayer ? card : null;
       newState.isAnimating = true;
@@ -605,105 +473,43 @@ function App() {
         
         const { newState, events } = applyCardEffects(prevState, card, isPlayer);
         
-        // UI側の演出（damageText, shake）を処理 - 各エフェクトを600ms間隔で、位置をずらして重ならないようにする
-        // 位置計算: self-status bottom:4rem → playerHP_Y ≈ innerHeight - 100
-        //           enemy-status top:4rem → enemyHP_Y ≈ 40
-        const isMobile = window.innerHeight <= 480;
-        const playerHP_Y = window.innerHeight - (isMobile ? 80 : 120);
-        const enemyHP_Y = isMobile ? 30 : 50;
-        const hpBarX = isMobile ? 10 : 30;
-        const deckAreaX = hpBarX + (isMobile ? 70 : 120); // デッキアイコンの横
-        
         let effectIndex = 0;
         events.forEach((ev) => {
           const delay = effectIndex * 600;
-          const offsetY = (effectIndex % 3) * 25;
+          const offsetX = 30 + (effectIndex % 3) * 60; 
+          const offsetY = (effectIndex % 3) * 40; 
           effectIndex++;
           setTimeout(() => {
             if (ev.type === 'damage') {
-              // 相手へのダメージ → 相手のHPバーの上
               const isTargetPlayer = ev.data.target === 'player';
-              const y = isTargetPlayer ? playerHP_Y - 30 - offsetY : enemyHP_Y - 10 - offsetY;
-              addDamageText(hpBarX + 20, y, `-${ev.data.value}`);
+              const baseY = isTargetPlayer ? window.innerHeight - 200 : 200;
+              addDamageText(offsetX, baseY - offsetY, `-${ev.data.value}`);
               triggerShake(isTargetPlayer ? 'player' : 'enemy');
             }
             if (ev.type === 'damage_self') {
-              // 自傷ダメージ → 自分のHPバーの上
-              const y = isPlayer ? playerHP_Y - 30 - offsetY : enemyHP_Y - 10 - offsetY;
-              addDamageText(hpBarX + 20, y, `-${ev.data.value}`, '#ff6b35');
+              const baseY = isPlayer ? window.innerHeight - 200 : 200;
+              addDamageText(offsetX, baseY - offsetY, `-${ev.data.value}`, '#ff6b35');
               triggerShake(isPlayer ? 'player' : 'enemy');
             }
             if (ev.type === 'heal') {
-              // ヒール → 自分のHPバーの上
-              const y = isPlayer ? playerHP_Y - 30 - offsetY : enemyHP_Y - 10 - offsetY;
-              addDamageText(hpBarX + 20, y, `+${ev.data.value}`, '#10b981');
+              const baseY = isPlayer ? window.innerHeight - 200 : 200;
+              addDamageText(offsetX, baseY - offsetY, `+${ev.data.value}`, '#10b981');
             }
             if (ev.type === 'voltage') {
-              const y = isPlayer ? playerHP_Y - 30 - offsetY : enemyHP_Y - 10 - offsetY;
-              addDamageText(hpBarX + 20, y, `+⚡${ev.data.value}`, '#f59e0b');
+              const baseY = isPlayer ? window.innerHeight - 200 : 200;
+              addDamageText(offsetX, baseY - offsetY, `+⚡${ev.data.value}`, '#f59e0b');
             }
             if (ev.type === 'shield') {
-              const y = isPlayer ? playerHP_Y - 30 - offsetY : enemyHP_Y - 10 - offsetY;
-              addDamageText(hpBarX + 20, y, `+🛡${ev.data.value}`, '#3b82f6');
+              const baseY = isPlayer ? window.innerHeight - 200 : 200;
+              addDamageText(offsetX, baseY - offsetY, `+🛡${ev.data.value}`, '#3b82f6');
             }
             if (ev.type === 'draw') {
-              // ドロー → デッキアイコンの上
-              const y = isPlayer ? playerHP_Y - 50 - offsetY : enemyHP_Y + 10 - offsetY;
-              addDrawEffect(deckAreaX, y, `🃏 Draw ${ev.data.count || 1}`);
-            }
-            if (ev.type === 'discard_select' && isPlayer) {
-              // Dear my future: 捨て札からカードを選ばせる
-              setShowDiscard({ show: true, owner: 'player' });
-              setDiscardSelectMode({
-                reason: ev.data.reason,
-                maxCost: ev.data.maxCost,
-                excludeId: ev.data.excludeId,
-                callback: (selectedDiscardCard, discardIndex) => {
-                  // 選んだカードの効果を発動
-                  setGameState(prev => {
-                    const newPlayer = {
-                      ...prev.player,
-                      discard: [...prev.player.discard],
-                      hand: [...prev.player.hand],
-                      deck: [...prev.player.deck],
-                      buffs: { ...prev.player.buffs }
-                    };
-                    // 捨て札からカードを取り出す
-                    const realIdx = newPlayer.discard.findIndex(c => c.id === selectedDiscardCard.id);
-                    if (realIdx !== -1) {
-                      const [card] = newPlayer.discard.splice(realIdx, 1);
-                      // カードの効果を適用
-                      const tempState = { ...prev, player: newPlayer };
-                      const { newState: resultState, events: subEvents } = applyCardEffects(tempState, card, true);
-                      // 使用後は捨て札へ
-                      resultState.player.discard.push(card);
-                      // サブエフェクトの演出
-                      const mobH = window.innerHeight <= 480;
-                      const pY = window.innerHeight - (mobH ? 80 : 120);
-                      const eY = mobH ? 30 : 50;
-                      const bX = mobH ? 30 : 50;
-                      subEvents.forEach((subEv, si) => {
-                        setTimeout(() => {
-                          if (subEv.type === 'damage') {
-                            const y = subEv.data.target === 'player' ? pY - 30 : eY - 10;
-                            addDamageText(bX, y, `-${subEv.data.value}`);
-                            triggerShake(subEv.data.target === 'player' ? 'player' : 'enemy');
-                          }
-                          if (subEv.type === 'heal') addDamageText(bX, pY - 30, `+${subEv.data.value}`, '#10b981');
-                          if (subEv.type === 'shield') addDamageText(bX, pY - 30, `+🛡${subEv.data.value}`, '#3b82f6');
-                        }, si * 600);
-                      });
-                      return resultState;
-                    }
-                    return prev;
-                  });
-                }
-              });
+              const baseY = isPlayer ? window.innerHeight / 2 : window.innerHeight / 2 - 60;
+              addDrawEffect(window.innerWidth / 2 - 60, baseY, `🃏 Draw ${ev.data.count || 1}`);
             }
           }, delay);
         });
 
-        // 強制ターン終了の処理
         if (newState.forceTurnEnd) {
           setTimeout(() => {
             if (isPlayer) endTurnPlayer();
@@ -713,7 +519,6 @@ function App() {
 
         newState.isAnimating = false;
         
-        // 🚨 オンライン同期: 自分のアクション結果をDBに反映する
         if (gameMode === 'online' && isPlayer) {
           updateGameStateToDB(roomId, newState);
         }
@@ -721,7 +526,6 @@ function App() {
         return newState;
       });
       
-      // 勝敗チェック
       setTimeout(() => {
           setGameState(current => {
               if (!current) return current;
@@ -747,7 +551,6 @@ function App() {
 
   const handleRematch = () => {
     if (!gameState) return;
-    // リマッチ: 現在のデッキ構成で初期状態に戻す
     const playerDeck = buildDeckFromList(gameState.player.originalDeckNames);
     const enemyDeck = generateCPUDeck();
     setGameState(createInitialState({ deck: playerDeck, unit: gameState.player.baseUnit }, enemyDeck));
@@ -762,20 +565,19 @@ function App() {
     return points;
   };
 
-  // ===== 新規画面群 (Home, Lobby, WaitingRoom) =====
   if (screen === 'home') {
     return (
       <div className="home-screen">
-        <div className="title-logo" style={{ marginBottom: '0.5rem', textAlign: 'center' }}>
-          <span className="title-link">Link!</span><span className="title-like">Like!</span><span className="title-link">Battle!</span>
+        <div className="title-logo" style={{ marginBottom: '2rem', textAlign: 'center' }}>
+          <span className="title-link">Link!</span><span className="title-like">Like!</span><span className="title-battle">Battle!</span>
         </div>
         <p className="title-subtitle">究極のスクールアイドルバトル</p>
         <input 
           className="name-input" 
-          maxLength={8} 
+          maxLength="6" 
           value={playerName} 
           onChange={e => setPlayerName(e.target.value)} 
-          placeholder="プレイヤー名 (最大8文字)" 
+          placeholder="プレイヤー名 (最大6文字)" 
         />
         <div className="mode-buttons">
           <button className="title-start-btn" onClick={() => { setGameMode('cpu'); setScreen('deckBuilder'); }}>
@@ -804,8 +606,8 @@ function App() {
             </div>
           ))}
         </div>
-        <button className="back-btn" style={{ marginTop: '1rem' }} onClick={() => setScreen('deckBuilder')}>
-          ← 戻る
+        <button style={{ marginTop: '2rem', padding: '10px', background: 'none', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }} onClick={() => setScreen('home')}>
+          戻る
         </button>
       </div>
     );
@@ -833,14 +635,6 @@ function App() {
                 : <p style={{ color: '#666' }}>ホストの開始を待っています...</p>
             )}
           </div>
-          <button className="back-btn" style={{ marginTop: '1rem' }} onClick={() => {
-            if (isHost && roomId) deleteRoom(roomId);
-            setRoomId('');
-            setRoomData(null);
-            setScreen('lobby');
-          }}>
-            ← 戻る
-          </button>
         </div>
       </div>
     );
@@ -856,54 +650,57 @@ function App() {
           <p>このゲームは横画面専用です</p>
         </div>
         <div className="deck-builder-screen">
-        <div className="deck-builder-sticky-header" style={{position:'sticky', top:0, background:'#fff', zIndex:1000, paddingBottom:'5px', borderBottom:'1px solid #eee'}}>
-          <div className="deck-builder-header">
-            <button className="back-btn" onClick={() => setScreen('home')}>← ホームへ</button>
-            <h1 className="deck-builder-title">デッキ作成 ({gameMode === 'cpu' ? 'CPU戦' : '通信対戦'})</h1>
-            <div className="deck-counter">{deckTotal} / 30</div>
+        <div className="deck-builder-sticky-header" style={{position:'sticky', top:0, background:'#fff', zIndex:1000, paddingBottom:'4px', borderBottom:'1px solid #eee'}}>
+          <div className="deck-builder-header" style={{ padding: '0.2rem 1rem' }}>
+            <button className="back-btn" onClick={() => setScreen('home')} style={{ padding: '0.1rem 0.4rem' }}>← ホーム</button>
+            <h1 className="deck-builder-title" style={{ fontSize: '0.9rem' }}>デッキ作成 ({gameMode === 'cpu' ? 'CPU戦' : '通信対戦'})</h1>
+            <div className="deck-counter" style={{ padding: '0.1rem 0.6rem', fontSize: '0.8rem' }}>{deckTotal} / 30</div>
           </div>
 
-          {/* マナカーブ */}
-          <div className="mana-curve-wrapper">
-            <div className="mana-curve">
-              {manaCurve.map((count, i) => (
-                <div key={i} className="mana-bar-container">
-                  <div className="mana-bar-bg">
-                    {count > 0 && <span className="mana-bar-count">{count}</span>}
-                    <div className="mana-bar-fill" style={{ height: `${maxManaCount > 0 ? (count / maxManaCount) * 100 : 0}%` }}></div>
-                  </div>
-                  <span className="mana-label">{i === 7 ? '7+' : i}</span>
-                </div>
+          {/* ユニット選択とマナカーブをスリム化して横に並べる */}
+          <div className="unit-select-area" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.2rem 1rem', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', flexShrink: 0 }}>
+              <span className="unit-label" style={{ fontSize: '0.75rem' }}>基本ユニット:</span>
+              {['スリーズブーケ', 'DOLLCHESTRA', 'みらくらぱーく！'].map(unit => (
+                <button
+                  key={unit}
+                  className={`unit-btn ${selectedUnit === unit ? 'active' : ''}`}
+                  style={{ background: unit === 'スリーズブーケ' ? '#ffd6e0' : unit === 'DOLLCHESTRA' ? '#c5d8f0' : '#fff0b3', padding: '0.2rem 0.4rem', fontSize: '0.65rem' }}
+                  onClick={() => { 
+                    if (selectedUnit !== unit && deckTotal > 0) {
+                      if (!window.confirm('基本ユニットを変更するとデッキがリセットされます。よろしいですか？')) return;
+                    }
+                    setSelectedUnit(unit); 
+                    setDeckList({}); 
+                  }}
+                >
+                  {unit}
+                </button>
               ))}
             </div>
-          </div>
 
-          {/* ユニット選択 */}
-          <div className="unit-select-area">
-            <span className="unit-label">基本ユニット:</span>
-            {['スリーズブーケ', 'DOLLCHESTRA', 'みらくらぱーく！'].map(unit => (
-              <button
-                key={unit}
-                className={`unit-btn ${selectedUnit === unit ? 'active' : ''}`}
-                style={{ background: unit === 'スリーズブーケ' ? '#ffd6e0' : unit === 'DOLLCHESTRA' ? '#c5d8f0' : '#fff0b3' }}
-                onClick={() => { 
-                  if (selectedUnit !== unit && deckTotal > 0) {
-                    if (!window.confirm('基本ユニットを変更するとデッキがリセットされます。よろしいですか？')) return;
-                  }
-                  setSelectedUnit(unit); 
-                  setDeckList({}); 
-                }}
-              >
-                {unit}
-              </button>
-            ))}
+            {/* マナカーブの横幅と高さを調整して中央に配置 */}
+            <div className="mana-curve-wrapper" style={{ flex: 1, maxWidth: '180px', margin: '0' }}>
+              <div className="mana-curve" style={{ height: '30px', padding: 0 }}>
+                {manaCurve.map((count, i) => (
+                  <div key={i} className="mana-bar-container" style={{ width: '12%' }}>
+                    <div className="mana-bar-bg" style={{ background: '#e2e8f0' }}>
+                      {count > 0 && <span className="mana-bar-count" style={{ fontSize: '0.5rem', bottom: '1px' }}>{count}</span>}
+                      <div className="mana-bar-fill" style={{ height: `${maxManaCount > 0 ? (count / maxManaCount) * 100 : 0}%` }}></div>
+                    </div>
+                    <span className="mana-label" style={{ fontSize: '0.45rem', marginTop: '1px' }}>{i === 7 ? '7+' : i}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
             
-            <div style={{ marginLeft: 'auto' }}>
+            {/* バトル開始ボタン */}
+            <div style={{ flexShrink: 0 }}>
               <button
                 className={`battle-start-btn ${deckTotal === 30 ? 'ready' : ''}`}
                 disabled={deckTotal !== 30}
                 onClick={handleDeckComplete}
-                style={{ width: 'auto', padding: '0.4rem 1.5rem', fontSize: '1rem' }}
+                style={{ width: 'auto', padding: '0.3rem 0.8rem', fontSize: '0.8rem' }}
               >
                 {gameMode === 'cpu' ? 'バトル開始' : 'ロビーへ進む'}
               </button>
@@ -911,11 +708,11 @@ function App() {
           </div>
 
           {selectedUnit && (
-            <div className="starter-deck-area">
-              <button className="starter-btn" onClick={loadStarterDeck}>
+            <div className="starter-deck-area" style={{ padding: '0 1rem 0.2rem', gap: '0.4rem', justifyContent: 'flex-start' }}>
+              <button className="starter-btn" onClick={loadStarterDeck} style={{ padding: '0.2rem 0.6rem', fontSize: '0.7rem' }}>
                 スターターデッキを読み込む
               </button>
-              <button className="clear-btn" onClick={() => setDeckList({})}>クリア</button>
+              <button className="clear-btn" onClick={() => setDeckList({})} style={{ padding: '0.2rem 0.6rem', fontSize: '0.7rem' }}>クリア</button>
             </div>
           )}
         </div>
@@ -1002,27 +799,9 @@ function App() {
           )}
         
         {selectedCard && (
-          <div className="card-preview-overlay" onClick={() => setSelectedCard(null)}>
-            <div className="card-preview" style={{ background: getCardBackground(selectedCard.歌唱) }} onClick={e => e.stopPropagation()}>
-              <div className="card-cost" style={{top:'-12px', left:'-12px', width:'44px', height:'44px', fontSize:'1.4rem'}}>{selectedCard.コスト}</div>
-              <div className="card-title" style={{fontSize:'1.4rem'}}>{selectedCard.曲名}</div>
-              <div className="card-tags" style={{fontSize:'0.85rem'}}>
-                <span>{selectedCard.歌唱}</span>
-                <span>{selectedCard.センター}</span>
-              </div>
-              <div className="card-stats" style={{fontSize:'0.95rem', padding:'8px'}}>
-                {selectedCard.パワー && <span className="stat-item stat-power"><Swords size={16}/>{selectedCard.パワー}</span>}
-                {selectedCard.シールド && <span className="stat-item stat-shield"><Shield size={16}/>{selectedCard.シールド}</span>}
-                {selectedCard.ヒール && <span className="stat-item stat-heal"><HeartPulse size={16}/>{selectedCard.ヒール}</span>}
-                {selectedCard.ダメージ && <span className="stat-item stat-damage"><Zap size={16}/>{selectedCard.ダメージ}</span>}
-              </div>
-              <div className="card-effect" style={{fontSize:'1.15rem', padding:'12px'}}>
-                {selectedCard.効果1 && <div style={{marginBottom:'6px'}}>{selectedCard.効果1}</div>}
-                {selectedCard.効果2 && <div>{selectedCard.効果2}</div>}
-              </div>
-              <div style={{display:'flex', gap:'8px', marginTop:'10px'}}>
-                <button className="preview-close-btn" onClick={() => setSelectedCard(null)}>閉じる</button>
-              </div>
+          <div className="modal-overlay" onClick={() => setSelectedCard(null)}>
+            <div className="modal-content" style={{maxWidth: '350px', transform: 'scale(1.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'transparent', border: 'none', boxShadow: 'none'}}>
+              <StandardCard card={selectedCard} />
             </div>
           </div>
         )}
@@ -1063,11 +842,6 @@ function App() {
         </div>
 
         <div className="voltage-sidebar">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: '8px' }}>
-            <button className="btn-special" disabled style={{ transform: 'scale(0.8)', transformOrigin: 'right center', opacity: gameState.enemy.specialUsed ? 0.5 : 1, filter: gameState.enemy.specialUsed ? 'grayscale(100%)' : 'none' }}>
-              ENEMY SP
-            </button>
-          </div>
           <div className="voltage-group">
             <span className="voltage-label">Enemy Voltage</span>
             <div className="voltage-container" style={{ margin: 0 }}>
@@ -1205,27 +979,14 @@ function App() {
         </div>
       )}
 
-      <div className="hand-container" style={{ maxWidth: `${Math.max(200, window.innerWidth - (window.innerHeight <= 480 ? 240 : 440))}px` }}>
+      <div className="hand-container" style={{ maxWidth: `${Math.max(200, window.innerWidth - (window.innerHeight <= 480 ? 160 : 220))}px` }}>
         {gameState.player.hand.map((card, idx, arr) => {
           const calcCost = getCalculatedCost(card, gameState.player);
           const canPlay = gameState.isPlayerTurn && gameState.player.currentVoltage >= calcCost && !gameState.turnBanner && !gameState.isCoinFlipPhase && !gameState.isAnimating;
           
           const isMobile = window.innerHeight <= 480;
-          const baseCardWidth = isMobile ? 85 : 130;
-          const baseCardHeight = isMobile ? 120 : 224;
-          const actualMaxWidth = Math.max(200, window.innerWidth - (isMobile ? 240 : 440));
-          
-          // 5枚以下: フルサイズ。6枚以上: カード幅を縮小して被りを防ぐ
-          const maxCardsFullSize = 5;
-          let cardScale = 1;
-          if (arr.length > maxCardsFullSize) {
-            // 枚数が増えるほど縮小（最小60%まで）
-            cardScale = Math.max(0.6, maxCardsFullSize / arr.length);
-          }
-          const cardWidth = Math.round(baseCardWidth * cardScale);
-          const cardHeight = Math.round(baseCardHeight * cardScale);
-          
-          // カードが全て収まるためのマージン計算（最低でもカード幅の35%は見えるように）
+          const cardWidth = isMobile ? 85 : 130;
+          const actualMaxWidth = Math.max(200, window.innerWidth - (isMobile ? 160 : 220));
           const minVisible = cardWidth * 0.35;
           let marginLeft;
           if (idx === 0) {
@@ -1247,10 +1008,7 @@ function App() {
                     opacity: canPlay ? 1 : 0.4,
                     cursor: 'pointer',
                     filter: canPlay ? 'none' : 'grayscale(30%)',
-                    marginLeft: marginLeft,
-                    width: `${cardWidth}px`,
-                    height: `${cardHeight}px`,
-                    fontSize: cardScale < 1 ? `${cardScale * 100}%` : undefined
+                    marginLeft: marginLeft
                 }}
                 onClick={() => setSelectedCard(card)}
             >
@@ -1277,39 +1035,16 @@ function App() {
 
       {/* Discard Modal */}
       {showDiscard.show && (
-        <div className="modal-overlay" onClick={() => { setShowDiscard({ show: false, owner: null }); setDiscardSelectMode(null); }}>
+        <div className="modal-overlay" onClick={() => setShowDiscard({ show: false, owner: null })}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 style={{fontFamily:'Outfit', margin: 0}}>
-                {discardSelectMode 
-                  ? `捨て札からコスト${discardSelectMode.maxCost}以下のカードを選択`
-                  : `${showDiscard.owner === 'player' ? 'YOUR' : 'ENEMY'} DISCARD PILE`
-                }
-              </h2>
-              <button className="modal-close" onClick={() => { setShowDiscard({ show: false, owner: null }); setDiscardSelectMode(null); }}><X size={20}/></button>
+              <h2 style={{fontFamily:'Outfit', margin: 0}}>{showDiscard.owner === 'player' ? 'YOUR' : 'ENEMY'} DISCARD PILE</h2>
+              <button className="modal-close" onClick={() => setShowDiscard({ show: false, owner: null })}><X size={20}/></button>
             </div>
             <div className="modal-grid">
-              {gameState[showDiscard.owner].discard.map((card, i) => {
-                const isSelectable = discardSelectMode && Number(card.コスト) <= discardSelectMode.maxCost && (!discardSelectMode.excludeId || card.id !== discardSelectMode.excludeId);
-                return (
-                  <div key={i} style={{ 
-                    cursor: discardSelectMode ? (isSelectable ? 'pointer' : 'not-allowed') : 'pointer',
-                    opacity: discardSelectMode && !isSelectable ? 0.3 : 1,
-                    filter: discardSelectMode && !isSelectable ? 'grayscale(60%)' : 'none',
-                    transition: 'all 0.2s'
-                  }} onClick={() => {
-                    if (discardSelectMode && isSelectable) {
-                      discardSelectMode.callback(card, i);
-                      setShowDiscard({ show: false, owner: null });
-                      setDiscardSelectMode(null);
-                    } else if (!discardSelectMode) {
-                      setSelectedCard(card);
-                    }
-                  }}>
-                    <StandardCard card={card} />
-                  </div>
-                );
-              })}
+              {gameState[showDiscard.owner].discard.map((card, i) => (
+                <StandardCard key={i} card={card} />
+              ))}
               {gameState[showDiscard.owner].discard.length === 0 && <div style={{color:'#666'}}>No cards in discard pile.</div>}
             </div>
           </div>
