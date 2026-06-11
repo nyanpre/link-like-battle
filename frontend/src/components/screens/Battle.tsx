@@ -5,7 +5,6 @@ import { getCalculatedCost, applyCardEffects, drawCard as engineDrawCard } from 
 import { buildDeckFromList, generateCPUDeck, createInitialState } from '../../utils/gameLogic';
 import { updateGameStateToDB } from '../../utils/firebase';
 
-// ★ 切り出したUIコンポーネントと型定義
 import { GameState, CardData } from '../../types';
 import { StandardCard } from '../ui/Card';
 import { PlayerStatus } from '../ui/PlayerStatus';
@@ -17,7 +16,6 @@ import { VoltageSidebar } from '../ui/VoltageSidebar';
 import { SetlistBoard } from '../ui/SetlistBoard';
 import { ActionControls } from '../ui/ActionControls';
 
-// ボルテージとドローの定義
 const VOLTAGE_FIRST = [0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
 const VOLTAGE_SECOND = [0,2,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
 const DRAW_FIRST = (turn: number) => (turn % 2 === 1) ? 1 : 0;
@@ -33,7 +31,6 @@ function getDrawCount(isFirstPlayer: boolean, globalTurn: number) {
   return isFirstPlayer ? DRAW_FIRST(globalTurn) : DRAW_SECOND(globalTurn);
 }
 
-// ★ Propsの型を厳密に定義
 interface BattleProps {
   gameState: GameState;
   setGameState: React.Dispatch<React.SetStateAction<GameState | null>>;
@@ -48,12 +45,38 @@ interface BattleProps {
 export const Battle: React.FC<BattleProps> = ({
   gameState, setGameState, gameMode, roomId, isHost, setScreen, selectedCard, setSelectedCard
 }) => {
-  // ★ 内部のStateも型を定義
   const [damageTexts, setDamageTexts] = useState<{id: number, x: number, y: number, text: string, color: string, cssClass: string}[]>([]);
   const [showDiscard, setShowDiscard] = useState<{ show: boolean, owner: 'player' | 'enemy' | null }>({ show: false, owner: null });
   const cpuTurnRef = useRef<any>(null);
 
-  // --- バトルロジック ---
+  // 【修正2】HPを監視し、0になったら確実にリザルト画面を出す（一定ターンでのフリーズ防止）
+  useEffect(() => {
+    if (!gameState || gameState.battleResult || gameState.isCoinFlipPhase) return;
+
+    if (gameState.player.hp <= 0 || gameState.enemy.hp <= 0) {
+      const timer = setTimeout(() => {
+        setGameState((prev: any) => {
+          if (prev.battleResult) return prev;
+          let result: 'WIN' | 'LOSE' | 'DRAW' | null = null;
+          if (prev.player.hp <= 0 && prev.enemy.hp <= 0) result = "DRAW";
+          else if (prev.enemy.hp <= 0) result = "WIN";
+          else if (prev.player.hp <= 0) result = "LOSE";
+          
+          if (!result) return prev;
+
+          const finalState = { ...prev, battleResult: result };
+          
+          if (gameMode === 'online') {
+            updateGameStateToDB(roomId, finalState);
+          }
+          
+          return finalState;
+        });
+      }, 500); // 最後の演出を見るためのディレイ
+      return () => clearTimeout(timer);
+    }
+  }, [gameState?.player?.hp, gameState?.enemy?.hp, gameState?.battleResult, gameState?.isCoinFlipPhase, gameMode, roomId, setGameState]);
+
   useEffect(() => {
     if (!gameState) return;
     if (gameState.isCoinFlipPhase) {
@@ -118,10 +141,9 @@ export const Battle: React.FC<BattleProps> = ({
     setTimeout(() => { setGameState((prev: any) => ({ ...prev, animations: { ...prev.animations, [`${target}Shake`]: false } })); }, 500);
   };
 
-  const drawCard = (userState: any, ownerStr: string) => {
+  const drawCard = (userState: any) => {
     if (userState.deck.length === 0) {
-      setTimeout(() => alert(ownerStr === 'player' ? "DECK OUT! YOU LOSE..." : "DECK OUT! YOU WIN!"), 500);
-      userState.hp = 0; 
+      userState.hp = 0; // デッキアウト時、アラートを出さずにHPを0にし、監視useEffectに任せる
       return false;
     }
     const card = userState.deck.shift();
@@ -157,7 +179,7 @@ export const Battle: React.FC<BattleProps> = ({
       }
       
       if (newPrevTarget.buffs.setEnemyVoltage3) { newTarget.currentVoltage = 3; newPrevTarget.buffs.setEnemyVoltage3 = false; }
-      for (let i = 0; i < drawCount; i++) { drawCard(newTarget, isPlayer ? 'player' : 'enemy'); }
+      for (let i = 0; i < drawCount; i++) { drawCard(newTarget); }
       
       return {
         ...prev, isPlayerTurn: isPlayer, turnBanner: isPlayer ? "YOUR TURN" : (gameMode === 'cpu' ? "CPU TURN" : "ENEMY TURN"),
@@ -225,7 +247,7 @@ export const Battle: React.FC<BattleProps> = ({
 
   useEffect(() => {
     if (!gameState) return;
-    if (gameState.isPlayerTurn && !gameState.isCoinFlipPhase && !gameState.turnBanner && gameState.player.hp > 0 && gameState.enemy.hp > 0) {
+    if (gameState.isPlayerTurn && !gameState.isCoinFlipPhase && !gameState.turnBanner && gameState.player.hp > 0 && gameState.enemy.hp > 0 && !gameState.isAnimating) {
       const hasPlayable = gameState.player.hand.some((c: any) => gameState.player.currentVoltage >= getCalculatedCost(c, gameState.player));
       const canUseSP = !gameState.player.specialUsed;
       if (!hasPlayable && !canUseSP) {
@@ -233,15 +255,16 @@ export const Battle: React.FC<BattleProps> = ({
         return () => clearTimeout(t);
       }
     }
-  }, [gameState?.isPlayerTurn, gameState?.player?.currentVoltage, gameState?.player?.hand?.length, gameState?.player?.specialUsed, gameState?.turnBanner, gameState?.isCoinFlipPhase]);
+  }, [gameState?.isPlayerTurn, gameState?.player?.currentVoltage, gameState?.player?.hand?.length, gameState?.player?.specialUsed, gameState?.turnBanner, gameState?.isCoinFlipPhase, gameState?.isAnimating]);
 
+  // 【修正1】CPUの思考タイマーに「アニメーション中ではない（!isAnimating）」条件を追加し、多重実行を防止
   useEffect(() => {
     if (!gameState || gameMode !== 'cpu') return;
-    if (!gameState.isCoinFlipPhase && !gameState.isPlayerTurn && gameState.enemy.hp > 0 && gameState.player.hp > 0 && !gameState.turnBanner) {
+    if (!gameState.isCoinFlipPhase && !gameState.isPlayerTurn && gameState.enemy.hp > 0 && gameState.player.hp > 0 && !gameState.turnBanner && !gameState.isAnimating) {
       cpuTurnRef.current = setTimeout(() => { playEnemyTurn(); }, 1500);
       return () => clearTimeout(cpuTurnRef.current);
     }
-  }, [gameState?.isPlayerTurn, gameState?.enemy?.currentVoltage, gameState?.turnBanner, gameState?.isCoinFlipPhase, gameMode]);
+  }, [gameState?.isPlayerTurn, gameState?.enemy?.currentVoltage, gameState?.enemy?.hand?.length, gameState?.turnBanner, gameState?.isCoinFlipPhase, gameState?.isAnimating, gameMode]);
 
   const playEnemyTurn = () => {
     const { enemy } = gameState;
@@ -293,6 +316,14 @@ export const Battle: React.FC<BattleProps> = ({
   };
 
   const playCard = (card: CardData, isPlayer: boolean) => {
+    // 【修正1】多重実行・見えないカード処理をブロックする
+    if (gameState.isAnimating) return;
+
+    // 事前にコストをチェックし、足りなければここで終了させる
+    const userCheck = isPlayer ? gameState.player : gameState.enemy;
+    const costCheck = getCalculatedCost(card, userCheck);
+    if (userCheck.currentVoltage < costCheck) return;
+
     setGameState((prev: any) => {
       const newState = {
         ...prev,
@@ -313,7 +344,7 @@ export const Battle: React.FC<BattleProps> = ({
       user.buffs.turnCardsPlayed.push(card.曲名);
       
       newState.enemyPlayedCard = !isPlayer ? card : null;
-      newState.isAnimating = true;
+      newState.isAnimating = true; // ここでアニメーションフラグを立てる
       return newState;
     });
 
@@ -367,7 +398,7 @@ export const Battle: React.FC<BattleProps> = ({
           }, 500);
         }
 
-        newState.isAnimating = false;
+        newState.isAnimating = false; // アニメーション解除
         
         if (gameMode === 'online' && isPlayer) {
           updateGameStateToDB(roomId, newState);
@@ -375,27 +406,6 @@ export const Battle: React.FC<BattleProps> = ({
 
         return newState;
       });
-      
-      setTimeout(() => {
-          setGameState((current: any) => {
-              if (!current) return current;
-              const userHp = isPlayer ? current.player.hp : current.enemy.hp;
-              const targetHp = isPlayer ? current.enemy.hp : current.player.hp;
-              
-              let result = null;
-              if (targetHp <= 0 && userHp <= 0) result = "DRAW";
-              else if (targetHp <= 0) result = isPlayer ? "WIN" : "LOSE";
-              else if (userHp <= 0) result = isPlayer ? "LOSE" : "WIN";
-
-              const finalState = result ? { ...current, battleResult: result } : current;
-              
-              if (gameMode === 'online' && isPlayer && result) {
-                updateGameStateToDB(roomId, finalState);
-              }
-              
-              return finalState;
-          });
-      }, 350);
     }, 300);
   };
 

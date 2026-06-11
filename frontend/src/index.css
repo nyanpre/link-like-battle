@@ -75,14 +75,14 @@ body {
   position: absolute;
   top: 4rem;
   /* 絶対配置にもセーフティゾーンを加算 */
-  left: calc(2rem + var(--safe-left)) !important;
+  left: calc(0.5rem + var(--safe-left)) !important;
   transform: scale(1);
 }
 
 .self-status {
   position: absolute;
   bottom: 4rem;
-  left: calc(2rem + var(--safe-left)) !important;
+  left: calc(0.5rem + var(--safe-left)) !important;
 }
 
 .hp-bar-container {
@@ -158,7 +158,7 @@ body {
 .hand-container {
   position: absolute;
   bottom: 1rem;
-  left: 50%;
+  left: 49%;
   transform: translateX(-50%);
   width: auto;
   max-width: 60vw;
@@ -314,7 +314,7 @@ body {
 
 .action-container {
   position: absolute;
-  right: calc(2rem + var(--safe-right)) !important;
+  right: calc(1.5rem + var(--safe-right)) !important;
   bottom: 2rem;
   display: flex;
   flex-direction: row;
