@@ -1,24 +1,28 @@
 // src/components/screens/DeckBuilder.tsx
 import React from 'react';
 import { Shield, Plus, Minus, Zap, HeartPulse, Swords, Smartphone } from 'lucide-react';
-import cardData from '../../data.json';
+import cardDataRaw from '../../data.json';
 import { getCardBackground, StandardCard } from '../ui/Card';
+import { CardData } from '../../types';
+
+// JSONデータをCardData型として扱う
+const cardData = cardDataRaw as unknown as CardData[];
 
 interface DeckBuilderProps {
-  gameMode: any;
-  setScreen: any;
+  gameMode: string | null;
+  setScreen: (screen: string) => void;
   deckTotal: number;
-  selectedUnit: any;
-  setSelectedUnit: any;
+  selectedUnit: string | null;
+  setSelectedUnit: (unit: string) => void;
   manaCurve: number[];
   maxManaCount: number;
   handleDeckComplete: () => void;
   loadStarterDeck: () => void;
   deckList: Record<string, number>;
-  setDeckList: any;
-  availableCards: any[];
-  selectedCard: any;
-  setSelectedCard: any;
+  setDeckList: React.Dispatch<React.SetStateAction<Record<string, number>>>;
+  availableCards: CardData[];
+  selectedCard: CardData | null;
+  setSelectedCard: (card: CardData | null) => void;
   removeCardFromDeck: (name: string) => void;
   addCardToDeck: (name: string) => void;
 }
@@ -140,13 +144,15 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 <h3 className="pool-title">デッキ内容 ({deckTotal}/30)</h3>
                 <div className="deck-list">
                   {Object.entries(deckList).sort((a, b) => {
-                    const ca = cardData.find((c: any) => c.曲名 === a[0]);
-                    const cb = cardData.find((c: any) => c.曲名 === b[0]);
+                    // ★ as CardData で undefined 判定を強制排除
+                    const ca = cardData.find(c => c.曲名 === a[0]) as CardData;
+                    const cb = cardData.find(c => c.曲名 === b[0]) as CardData;
                     return (Number(ca?.コスト) || 0) - (Number(cb?.コスト) || 0);
                   }).map(([name, count]) => {
-                    const card = cardData.find((c: any) => c.曲名 === name);
+                    // ★ as CardData で undefined 判定を強制排除
+                    const card = cardData.find(c => c.曲名 === name) as CardData;
                     return (
-                      <div key={name} className="deck-item" style={{ borderLeft: `4px solid ${card ? getCardBackground(card.歌唱) === '#d0d0d0' ? '#999' : getCardBackground(card.歌唱).replace('linear-gradient(135deg, ', '').split(',')[0] : '#999'}` }} onClick={() => setSelectedCard(card)}>
+                      <div key={name} className="deck-item" style={{ borderLeft: `4px solid ${card ? (getCardBackground(card.歌唱) as string) === '#d0d0d0' ? '#999' : (getCardBackground(card.歌唱) as string).replace('linear-gradient(135deg, ', '').split(',')[0] : '#999'}` }} onClick={() => setSelectedCard(card)}>
                         <div className="deck-item-left">
                           <span className="deck-item-cost">{card?.コスト}</span>
                           <div className="deck-item-details">

@@ -1632,3 +1632,71 @@ body {
   margin: 1rem 0;
   font-weight: 900;
 }
+
+/* オーバードロー（手札溢れ）のアニメーション */
+.overdraw-container {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  animation: overdraw-anim 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ★ プレイヤーと敵で飛び出す高さを分ける */
+.overdraw-container.player { top: 60%; }
+.overdraw-container.enemy { top: 30%; }
+
+.overdraw-text {
+  color: #ef4444;
+  font-weight: 900;
+  font-size: 2.5rem;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px #000, 3px 3px 0 #000;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%) rotate(-15deg);
+  z-index: 10;
+  white-space: nowrap;
+}
+
+/* オーバードロー（手札溢れ・手札捨て）のアニメーション */
+.overdraw-container {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.overdraw-container.player {
+  top: 60%;
+  animation: overdraw-anim-player 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.overdraw-container.enemy {
+  top: 30%;
+  animation: overdraw-anim-enemy 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* プレイヤーは左下の捨て札へ */
+@keyframes overdraw-anim-player {
+  0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+  15% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  75% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-45vw, 40vh) scale(0.3) rotate(-30deg); opacity: 0; }
+}
+
+/* 敵は右上の捨て札へ */
+@keyframes overdraw-anim-enemy {
+  0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+  15% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  75% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(45vw, -40vh) scale(0.3) rotate(30deg); opacity: 0; }
+}

@@ -1,6 +1,5 @@
 // src/components/ui/CardPreviewModal.tsx
 import React from 'react';
-import { Shield, Zap, HeartPulse, Swords } from 'lucide-react';
 import { getCalculatedCost } from '../../utils/battleEngine';
 import { getCardBackground } from './Card';
 import { GameState, CardData } from '../../types'; // ★追加

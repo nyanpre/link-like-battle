@@ -47,9 +47,11 @@ export const Battle: React.FC<BattleProps> = ({
 }) => {
   const [damageTexts, setDamageTexts] = useState<{id: number, x: number, y: number, text: string, color: string, cssClass: string}[]>([]);
   const [showDiscard, setShowDiscard] = useState<{ show: boolean, owner: 'player' | 'enemy' | null }>({ show: false, owner: null });
+  const [overdrawnCards, setOverdrawnCards] = useState<{id: number, card: CardData, isPlayer: boolean}[]>([]);
+  const [selectFromDiscard, setSelectFromDiscard] = useState<{ show: boolean, maxCost: number, excludeId?: string, reason: string } | null>(null);
+  
   const cpuTurnRef = useRef<any>(null);
 
-  // 【修正2】HPを監視し、0になったら確実にリザルト画面を出す（一定ターンでのフリーズ防止）
   useEffect(() => {
     if (!gameState || gameState.battleResult || gameState.isCoinFlipPhase) return;
 
@@ -65,17 +67,21 @@ export const Battle: React.FC<BattleProps> = ({
           if (!result) return prev;
 
           const finalState = { ...prev, battleResult: result };
-          
-          if (gameMode === 'online') {
-            updateGameStateToDB(roomId, finalState);
-          }
-          
+          if (gameMode === 'online') updateGameStateToDB(roomId, finalState);
           return finalState;
         });
-      }, 500); // 最後の演出を見るためのディレイ
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [gameState?.player?.hp, gameState?.enemy?.hp, gameState?.battleResult, gameState?.isCoinFlipPhase, gameMode, roomId, setGameState]);
+
+  const triggerOverdrawAnim = (card: CardData, isPlayer: boolean) => {
+    const id = Math.random();
+    setOverdrawnCards(prev => [...prev, { id, card, isPlayer }]);
+    setTimeout(() => {
+      setOverdrawnCards(prev => prev.filter(c => c.id !== id));
+    }, 1500);
+  };
 
   useEffect(() => {
     if (!gameState) return;
@@ -95,20 +101,20 @@ export const Battle: React.FC<BattleProps> = ({
           const newEnemy = {
             ...prev.enemy, isFirstPlayer: !playerGoesFirst, maxVoltage: enemyVoltage, currentVoltage: enemyVoltage, deck: [...prev.enemy.deck], hand: [...prev.enemy.hand], discard: [...prev.enemy.discard],
           };
+          
           for (let i = 0; i < playerDraw; i++) {
-            if (newPlayer.deck.length > 0) {
-              const card = newPlayer.deck.shift();
-              if (newPlayer.hand.length >= 8) newPlayer.discard.push(card);
-              else newPlayer.hand.push(card);
+            const res = engineDrawCard(newPlayer);
+            if (res.overdrawn && res.card) {
+                setTimeout(() => triggerOverdrawAnim(res.card as CardData, true), i * 300);
             }
           }
           for (let i = 0; i < enemyDraw; i++) {
-            if (newEnemy.deck.length > 0) {
-              const card = newEnemy.deck.shift();
-              if (newEnemy.hand.length >= 8) newEnemy.discard.push(card);
-              else newEnemy.hand.push(card);
+            const res = engineDrawCard(newEnemy);
+            if (res.overdrawn && res.card) {
+                setTimeout(() => triggerOverdrawAnim(res.card as CardData, false), i * 300);
             }
           }
+          
           return {
             ...prev, turn: 1, isCoinFlipPhase: false, isPlayerTurn: playerGoesFirst,
             turnBanner: playerGoesFirst ? "YOU FIRST!" : (gameMode === 'cpu' ? "CPU FIRST!" : "ENEMY FIRST!"),
@@ -141,23 +147,13 @@ export const Battle: React.FC<BattleProps> = ({
     setTimeout(() => { setGameState((prev: any) => ({ ...prev, animations: { ...prev.animations, [`${target}Shake`]: false } })); }, 500);
   };
 
-  const drawCard = (userState: any) => {
-    if (userState.deck.length === 0) {
-      userState.hp = 0; // デッキアウト時、アラートを出さずにHPを0にし、監視useEffectに任せる
-      return false;
-    }
-    const card = userState.deck.shift();
-    if (userState.hand.length >= 8) { userState.discard.push(card); } else { userState.hand.push(card); }
-    return true;
-  };
-
   const startTurn = (isPlayer: boolean) => {
     setGameState((prev: any) => {
       const nextGlobalTurn = prev.turn + 1;
       const prevTarget = isPlayer ? prev.enemy : prev.player;
       const newPrevTarget = {
         ...prevTarget,
-        buffs: { ...prevTarget.buffs, damageImmune: false, kozueDrawActive: false, sayakaDmgActive: false, doubleNextEffect: false, onyourmark102Active: false, yupYupYupActive: false, damageReflectionActive: false, tookDamageThisTurn: false, tookDamageAmount: 0, tookDamageCount: 0, turnCardsPlayed: [] }
+        buffs: { ...prevTarget.buffs, damageImmune: false, kozueDrawActive: false, sayakaDmgActive: false, doubleNextEffect: false, onyourmark102Active: false, yupYupYupActive: false, damageReflectionActive: false, tookDamageThisTurn: false, tookDamageAmount: 0, tookDamageCount: 0, turnCardsPlayed: [], turnCardsPlayedDetails: [] }
       };
       
       const target = isPlayer ? prev.player : prev.enemy;
@@ -167,7 +163,7 @@ export const Battle: React.FC<BattleProps> = ({
       
       let newTarget = {
         ...target, maxVoltage: newMax, currentVoltage: newMax, deck: [...target.deck], hand: [...target.hand], discard: [...target.discard],
-        buffs: { ...target.buffs, damageImmune: false, kozueDrawActive: false, sayakaDmgActive: false, doubleNextEffect: false, onyourmark102Active: false, yupYupYupActive: false, damageReflectionActive: false, tookDamageThisTurn: false, tookDamageAmount: 0, nextCardCostDown: 0, turnCardsPlayed: [] }
+        buffs: { ...target.buffs, damageImmune: false, kozueDrawActive: false, sayakaDmgActive: false, doubleNextEffect: false, onyourmark102Active: false, yupYupYupActive: false, damageReflectionActive: false, tookDamageThisTurn: false, tookDamageAmount: 0, nextCardCostDown: 0, turnCardsPlayed: [], turnCardsPlayedDetails: [] }
       };
 
       if (newTarget.buffs.cannotDrawNextTurn) {
@@ -179,7 +175,13 @@ export const Battle: React.FC<BattleProps> = ({
       }
       
       if (newPrevTarget.buffs.setEnemyVoltage3) { newTarget.currentVoltage = 3; newPrevTarget.buffs.setEnemyVoltage3 = false; }
-      for (let i = 0; i < drawCount; i++) { drawCard(newTarget); }
+      
+      for (let i = 0; i < drawCount; i++) { 
+        const res = engineDrawCard(newTarget);
+        if (res.overdrawn && res.card) {
+            setTimeout(() => triggerOverdrawAnim(res.card as CardData, isPlayer), i * 300);
+        }
+      }
       
       return {
         ...prev, isPlayerTurn: isPlayer, turnBanner: isPlayer ? "YOUR TURN" : (gameMode === 'cpu' ? "CPU TURN" : "ENEMY TURN"),
@@ -194,7 +196,12 @@ export const Battle: React.FC<BattleProps> = ({
     if (gameState.player.buffs.yupYupYupActive) {
       setGameState((prev: any) => {
         const next = { ...prev, player: { ...prev.player, hand: [...prev.player.hand], deck: [...prev.player.deck], discard: [...prev.player.discard] } };
-        for (let i = 0; i < prev.player.currentVoltage; i++) { engineDrawCard(next.player); }
+        for (let i = 0; i < prev.player.currentVoltage; i++) { 
+          const res = engineDrawCard(next.player); 
+          if (res.overdrawn && res.card) {
+              setTimeout(() => triggerOverdrawAnim(res.card as CardData, true), i * 200);
+          }
+        }
         return next;
       });
     }
@@ -207,19 +214,32 @@ export const Battle: React.FC<BattleProps> = ({
       
       queued.forEach((effect: any) => {
         if (effect.type === 'draw_voltage') {
-          for (let i = 0; i < newPlayer.currentVoltage; i++) { engineDrawCard(newPlayer); }
+          for (let i = 0; i < newPlayer.currentVoltage; i++) { 
+            const res = engineDrawCard(newPlayer); 
+            if (res.overdrawn && res.card) {
+                setTimeout(() => triggerOverdrawAnim(res.card as CardData, true), i * 200);
+            }
+          }
         } else if (effect.type === 'draw_specific' && effect.name) {
           const idx = newPlayer.deck.findIndex((c: any) => c.曲名 === effect.name);
           if (idx !== -1) {
             const [found] = newPlayer.deck.splice(idx, 1);
-            if (newPlayer.hand.length >= 8) newPlayer.discard.push(found);
-            else newPlayer.hand.push(found);
+            if (found) {
+                if (newPlayer.hand.length >= 8) {
+                   newPlayer.discard.push(found);
+                   setTimeout(() => triggerOverdrawAnim(found, true), 300);
+                } else newPlayer.hand.push(found);
+            }
           } else {
             const dIdx = newPlayer.discard.findIndex((c: any) => c.曲名 === effect.name);
             if (dIdx !== -1) {
               const [found] = newPlayer.discard.splice(dIdx, 1);
-              if (newPlayer.hand.length >= 8) newPlayer.discard.push(found);
-              else newPlayer.hand.push(found);
+              if (found) {
+                  if (newPlayer.hand.length >= 8) {
+                     newPlayer.discard.push(found);
+                     setTimeout(() => triggerOverdrawAnim(found, true), 300);
+                  } else newPlayer.hand.push(found);
+              }
             }
           }
         } else if (effect.type === 'heal' && effect.value) {
@@ -247,7 +267,7 @@ export const Battle: React.FC<BattleProps> = ({
 
   useEffect(() => {
     if (!gameState) return;
-    if (gameState.isPlayerTurn && !gameState.isCoinFlipPhase && !gameState.turnBanner && gameState.player.hp > 0 && gameState.enemy.hp > 0 && !gameState.isAnimating) {
+    if (gameState.isPlayerTurn && !gameState.isCoinFlipPhase && !gameState.turnBanner && gameState.player.hp > 0 && gameState.enemy.hp > 0 && !gameState.isAnimating && !selectFromDiscard) {
       const hasPlayable = gameState.player.hand.some((c: any) => gameState.player.currentVoltage >= getCalculatedCost(c, gameState.player));
       const canUseSP = !gameState.player.specialUsed;
       if (!hasPlayable && !canUseSP) {
@@ -255,9 +275,8 @@ export const Battle: React.FC<BattleProps> = ({
         return () => clearTimeout(t);
       }
     }
-  }, [gameState?.isPlayerTurn, gameState?.player?.currentVoltage, gameState?.player?.hand?.length, gameState?.player?.specialUsed, gameState?.turnBanner, gameState?.isCoinFlipPhase, gameState?.isAnimating]);
+  }, [gameState?.isPlayerTurn, gameState?.player?.currentVoltage, gameState?.player?.hand?.length, gameState?.player?.specialUsed, gameState?.turnBanner, gameState?.isCoinFlipPhase, gameState?.isAnimating, selectFromDiscard]);
 
-  // 【修正1】CPUの思考タイマーに「アニメーション中ではない（!isAnimating）」条件を追加し、多重実行を防止
   useEffect(() => {
     if (!gameState || gameMode !== 'cpu') return;
     if (!gameState.isCoinFlipPhase && !gameState.isPlayerTurn && gameState.enemy.hp > 0 && gameState.player.hp > 0 && !gameState.turnBanner && !gameState.isAnimating) {
@@ -277,7 +296,12 @@ export const Battle: React.FC<BattleProps> = ({
       if (enemy.buffs.yupYupYupActive) {
         setGameState((prev: any) => {
           const next = { ...prev, enemy: { ...prev.enemy, hand: [...prev.enemy.hand], deck: [...prev.enemy.deck], discard: [...prev.enemy.discard] } };
-          for (let i = 0; i < prev.enemy.currentVoltage; i++) { engineDrawCard(next.enemy); }
+          for (let i = 0; i < prev.enemy.currentVoltage; i++) { 
+             const res = engineDrawCard(next.enemy); 
+             if (res.overdrawn && res.card) {
+                 setTimeout(() => triggerOverdrawAnim(res.card as CardData, false), i * 300);
+             }
+          }
           return next;
         });
       }
@@ -289,19 +313,32 @@ export const Battle: React.FC<BattleProps> = ({
         
         queued.forEach((effect: any) => {
           if (effect.type === 'draw_voltage') {
-            for (let i = 0; i < newEnemy.currentVoltage; i++) { engineDrawCard(newEnemy); }
+            for (let i = 0; i < newEnemy.currentVoltage; i++) { 
+               const res = engineDrawCard(newEnemy);
+               if (res.overdrawn && res.card) {
+                   setTimeout(() => triggerOverdrawAnim(res.card as CardData, false), i * 300);
+               }
+            }
           } else if (effect.type === 'draw_specific' && effect.name) {
             const idx = newEnemy.deck.findIndex((c: any) => c.曲名 === effect.name);
             if (idx !== -1) {
               const [found] = newEnemy.deck.splice(idx, 1);
-              if (newEnemy.hand.length >= 8) newEnemy.discard.push(found);
-              else newEnemy.hand.push(found);
+              if (found) {
+                  if (newEnemy.hand.length >= 8) {
+                     newEnemy.discard.push(found);
+                     setTimeout(() => triggerOverdrawAnim(found, false), 300);
+                  } else newEnemy.hand.push(found);
+              }
             } else {
               const dIdx = newEnemy.discard.findIndex((c: any) => c.曲名 === effect.name);
               if (dIdx !== -1) {
                 const [found] = newEnemy.discard.splice(dIdx, 1);
-                if (newEnemy.hand.length >= 8) newEnemy.discard.push(found);
-                else newEnemy.hand.push(found);
+                if (found) {
+                    if (newEnemy.hand.length >= 8) {
+                       newEnemy.discard.push(found);
+                       setTimeout(() => triggerOverdrawAnim(found, false), 300);
+                    } else newEnemy.hand.push(found);
+                }
               }
             }
           } else if (effect.type === 'heal' && effect.value) {
@@ -315,14 +352,12 @@ export const Battle: React.FC<BattleProps> = ({
     }
   };
 
-  const playCard = (card: CardData, isPlayer: boolean) => {
-    // 【修正1】多重実行・見えないカード処理をブロックする
+  const playCard = (card: CardData, isPlayer: boolean, ignoreCost = false) => {
     if (gameState.isAnimating) return;
 
-    // 事前にコストをチェックし、足りなければここで終了させる
     const userCheck = isPlayer ? gameState.player : gameState.enemy;
     const costCheck = getCalculatedCost(card, userCheck);
-    if (userCheck.currentVoltage < costCheck) return;
+    if (!ignoreCost && userCheck.currentVoltage < costCheck) return;
 
     setGameState((prev: any) => {
       const newState = {
@@ -334,17 +369,23 @@ export const Battle: React.FC<BattleProps> = ({
       const user = isPlayer ? newState.player : newState.enemy;
 
       let cost = getCalculatedCost(card, user);
-      if (user.currentVoltage < cost) return prev;
       
-      user.currentVoltage -= cost;
-      if (user.buffs.nextCardCostDown > 0) user.buffs.nextCardCostDown = 0;
-      user.hand = user.hand.filter((c: any) => c.id !== card.id);
+      if (!ignoreCost) {
+          if (user.currentVoltage < cost) return prev;
+          user.currentVoltage -= cost;
+          if (user.buffs.nextCardCostDown > 0) user.buffs.nextCardCostDown = 0;
+          user.hand = user.hand.filter((c: any) => c.id !== card.id);
+      }
+      
       user.discard.push(card);
       newState.setlist.push({ card, owner: isPlayer ? 'player' : 'enemy' });
+      
       user.buffs.turnCardsPlayed.push(card.曲名);
+      if (!user.buffs.turnCardsPlayedDetails) user.buffs.turnCardsPlayedDetails = [];
+      user.buffs.turnCardsPlayedDetails.push({ 曲名: card.曲名, 歌唱: card.歌唱, センター: card.センター, uid: card.id });
       
       newState.enemyPlayedCard = !isPlayer ? card : null;
-      newState.isAnimating = true; // ここでアニメーションフラグを立てる
+      newState.isAnimating = true;
       return newState;
     });
 
@@ -386,23 +427,38 @@ export const Battle: React.FC<BattleProps> = ({
             }
             if (ev.type === 'draw') {
               const baseY = isPlayer ? window.innerHeight / 2 : window.innerHeight / 2 - 60;
-              addDrawEffect(window.innerWidth / 2 - 60, baseY, `🃏 Draw ${ev.data.count || 1}`);
+              addDrawEffect(window.innerWidth / 2 - 60, baseY, `Draw ${ev.data.count || 1}`);
+            }
+            if (ev.type === 'discard' || ev.type === 'overdraw') {
+              if (ev.data.card) triggerOverdrawAnim(ev.data.card, isPlayer);
+            }
+            if (ev.type === 'discard_select' && isPlayer) {
+              setSelectFromDiscard({ show: true, maxCost: ev.data.maxCost, reason: ev.data.reason, excludeId: ev.data.excludeId });
             }
           }, delay);
         });
 
-        if (newState.forceTurnEnd) {
-          setTimeout(() => {
-            if (isPlayer) endTurnPlayer();
-            else startTurn(true);
-          }, 500);
-        }
+        const totalDelay = Math.max(effectIndex * 600, 1000);
+        const forceTurnEnd = newState.forceTurnEnd;
 
-        newState.isAnimating = false; // アニメーション解除
-        
-        if (gameMode === 'online' && isPlayer) {
-          updateGameStateToDB(roomId, newState);
-        }
+        setTimeout(() => {
+           setGameState((current: any) => {
+             if (!current) return current;
+             const finalState = { ...current, isAnimating: false, enemyPlayedCard: null };
+             if (gameMode === 'online' && isPlayer) {
+               updateGameStateToDB(roomId, finalState);
+             }
+             return finalState;
+           });
+
+           if (forceTurnEnd) {
+             if (isPlayer) endTurnPlayer();
+             else startTurn(true);
+           }
+        }, totalDelay);
+
+        newState.isAnimating = true;
+        if (!isPlayer) newState.enemyPlayedCard = card;
 
         return newState;
       });
@@ -433,7 +489,6 @@ export const Battle: React.FC<BattleProps> = ({
 
   if (!gameState) return null;
 
-  // --- UI部分 ---
   return (
     <>
       <div className="orientation-warning">
@@ -451,6 +506,12 @@ export const Battle: React.FC<BattleProps> = ({
           </div>
         )}
 
+        {overdrawnCards.map(od => (
+          <div key={od.id} className={`overdraw-container ${od.isPlayer ? 'player' : 'enemy'}`}>
+            <StandardCard card={od.card} />
+          </div>
+        ))}
+
         {damageTexts.map(dt => (
           <div key={dt.id} className={dt.cssClass || 'damage-text'} style={{ left: `${dt.x}px`, top: `${dt.y}px`, color: dt.color }}>
             {dt.text}
@@ -463,11 +524,9 @@ export const Battle: React.FC<BattleProps> = ({
           ))}
         </div>
 
-        {/* 1. ボルテージサイドバー */}
         <VoltageSidebar player={gameState.player} enemy={gameState.enemy} />
 
         <div className="board-area">
-          {/* 敵ステータス */}
           <PlayerStatus 
             data={gameState.enemy} 
             isEnemy={true} 
@@ -475,10 +534,8 @@ export const Battle: React.FC<BattleProps> = ({
             onDiscardClick={(owner) => setShowDiscard({ show: true, owner: owner as 'player' | 'enemy' })} 
           />
 
-          {/* 2. セットリスト（プレイ履歴） */}
           <SetlistBoard gameState={gameState} />
 
-          {/* プレイヤーステータス */}
           <PlayerStatus 
             data={gameState.player} 
             isEnemy={false} 
@@ -487,7 +544,6 @@ export const Battle: React.FC<BattleProps> = ({
           />
         </div>
 
-        {/* 3. アクションコントロール（SPスキル / END TURN） */}
         <ActionControls 
           gameState={gameState} 
           handleSpSkill={handleSpSkill} 
@@ -496,7 +552,33 @@ export const Battle: React.FC<BattleProps> = ({
 
         <PlayerHand gameState={gameState} setSelectedCard={setSelectedCard} />
 
-        {/* モーダル・オーバーレイ群 */}
+        {selectFromDiscard && (
+          <div className="modal-overlay" style={{ zIndex: 3000 }}>
+            <div className="modal-content discard-modal">
+              <h2 className="discard-title">コスト{selectFromDiscard.maxCost}以下のカードを選んで使用</h2>
+              <button className="close-btn" onClick={() => setSelectFromDiscard(null)}>×</button>
+              <div className="discard-grid">
+                {gameState.player.discard
+                  .filter((c: any) => (Number(c.コスト) || 0) <= selectFromDiscard.maxCost && c.id !== selectFromDiscard.excludeId)
+                  .map((card: any, idx: number) => (
+                    <div key={idx} onClick={() => {
+                        setSelectFromDiscard(null);
+                        setGameState((prev: any) => {
+                           const newState = { ...prev };
+                           const discardIdx = newState.player.discard.findIndex((c: any) => c.id === card.id);
+                           if (discardIdx !== -1) newState.player.discard.splice(discardIdx, 1);
+                           return newState;
+                        });
+                        playCard(card, true, true);
+                    }}>
+                      <StandardCard card={card} />
+                    </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <CardPreviewModal selectedCard={selectedCard} gameState={gameState} playCard={playCard} setSelectedCard={setSelectedCard} />
         <DiscardModal showDiscard={showDiscard} setShowDiscard={setShowDiscard} gameState={gameState} />
         <BattleResultOverlay gameState={gameState} gameMode={gameMode} isHost={isHost} roomId={roomId} handleRematch={handleRematch} setScreen={setScreen} />
