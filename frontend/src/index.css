@@ -870,7 +870,7 @@ body {
   height: 100vh;
   background: #fcfcfc;
   overflow-y: auto; 
-  padding-bottom: 5rem !important; /* 空白を圧縮 */
+  padding-top: 5rem !important; /* 空白を圧縮 */
 }
 
 .deck-builder-header {
