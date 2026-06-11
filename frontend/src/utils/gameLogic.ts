@@ -1,9 +1,14 @@
-import cardData from '../data.json';
+// src/utils/gameLogic.ts
+import cardDataRaw from '../data.json';
+import { CardData, GameState, PlayerState } from '../types';
+
+// JSONデータを CardData 型の配列として扱うよう明示
+const cardData = cardDataRaw as unknown as CardData[];
 
 // ===== カードプール管理 =====
 
 // 基本ユニット選択に基づき使用可能なカードを取得
-export function getAvailableCards(baseUnit) {
+export function getAvailableCards(baseUnit: string): CardData[] {
   return cardData.filter(card => {
     const singing = card.歌唱;
     // 蓮ノ空共通カード
@@ -26,12 +31,12 @@ export function getAvailableCards(baseUnit) {
 }
 
 // デッキ構築（カード名リストから）
-export function buildDeckFromList(cardNames) {
-  const deck = [];
+export function buildDeckFromList(cardNames: string[]): CardData[] {
+  const deck: CardData[] = [];
   for (const name of cardNames) {
     const template = cardData.find(c => c.曲名 === name);
     if (template) {
-      deck.push({ ...template, id: Math.random().toString(36).substr(2, 9) });
+      deck.push({ ...template, id: Math.random().toString(36).substring(2, 11) });
     }
   }
   return deck.sort(() => Math.random() - 0.5);
@@ -39,7 +44,7 @@ export function buildDeckFromList(cardNames) {
 
 // ===== スターターデッキ =====
 
-export const STARTER_DECKS = {
+export const STARTER_DECKS: Record<string, string[]> = {
   'スリーズブーケ': [
     'On your mark', 'On your mark', 'On your mark',
     'Dream Believers', 'Dream Believers',
@@ -84,21 +89,43 @@ export const STARTER_DECKS = {
 };
 
 // CPU用ランダムデッキ生成
-export function generateCPUDeck() {
+export function generateCPUDeck(): { deck: CardData[], unit: string } {
   const units = ['スリーズブーケ', 'DOLLCHESTRA', 'みらくらぱーく！'];
   const cpuUnit = units[Math.floor(Math.random() * units.length)];
   const starterNames = STARTER_DECKS[cpuUnit];
   return { deck: buildDeckFromList(starterNames), unit: cpuUnit };
 }
 
+// ===== 初期状態生成 =====
+
+// 冗長なプレイヤー初期化をまとめるヘルパー関数
+function createBasePlayerState(unit: string, deck: CardData[]): PlayerState {
+  return {
+    name: '', // 後から App.tsx で「YOU」や「相手」に上書きされます
+    baseUnit: unit,
+    originalDeckNames: deck.map(c => c.曲名),
+    hp: 30,
+    maxHp: 30,
+    shield: 0,
+    maxVoltage: 0,
+    currentVoltage: 0,
+    specialUsed: false,
+    deck: deck.slice(3),
+    hand: deck.slice(0, 3),
+    discard: [],
+    buffs: {
+      damageImmune: false,
+      nextCardCostDown: 0,
+      turnCardsPlayed: [],
+      tookDamageCount: 0 // types/index.ts で必須にしたため追加
+    }
+  };
+}
+
 // 初期状態（デッキを引数で受け取る）
-export function createInitialState(playerDeckData, enemyDeckData) {
+export function createInitialState(playerDeckData?: { deck: CardData[], unit: string }, enemyDeckData?: { deck: CardData[], unit: string }): GameState {
   const pData = playerDeckData || generateCPUDeck();
   const eData = enemyDeckData || generateCPUDeck();
-  const playerDeck = pData.deck;
-  const playerUnit = pData.unit;
-  const enemyDeck = eData.deck;
-  const enemyUnit = eData.unit;
   
   return {
     turn: 1,
@@ -108,52 +135,17 @@ export function createInitialState(playerDeckData, enemyDeckData) {
     setlist: [],
     enemyPlayedCard: null,
     isAnimating: false,
-    player: {
-      baseUnit: playerUnit,
-      originalDeckNames: playerDeck.map(c => c.曲名),
-      hp: 30,
-      maxHp: 30,
-      shield: 0,
-      maxVoltage: 0,
-      currentVoltage: 0,
-      specialUsed: false,
-      deck: playerDeck.slice(3),
-      hand: playerDeck.slice(0, 3),
-      discard: [],
-      buffs: {
-        damageImmune: false,
-        nextCardCostDown: 0,
-        turnCardsPlayed: []
-      }
-    },
-    enemy: {
-      baseUnit: enemyUnit,
-      originalDeckNames: enemyDeck.map(c => c.曲名),
-      hp: 30,
-      maxHp: 30,
-      shield: 0,
-      maxVoltage: 0,
-      currentVoltage: 0,
-      specialUsed: false,
-      deck: enemyDeck.slice(3),
-      hand: enemyDeck.slice(0, 3),
-      discard: [],
-      buffs: {
-        damageImmune: false,
-        nextCardCostDown: 0,
-        turnCardsPlayed: []
-      }
-    },
+    battleResult: null, // ★追加してエラーを解消
+    player: createBasePlayerState(pData.unit, pData.deck),
+    enemy: createBasePlayerState(eData.unit, eData.deck),
     animations: {
       playerShake: false,
-      enemyShake: false,
-      damageTexts: []
+      enemyShake: false
     }
   };
 }
 
-export function createOnlineInitialState(playerData, enemyData) {
-  // playerData, enemyData は { deck: [], unit: '...' } の形式
+export function createOnlineInitialState(playerData: { deck: CardData[], unit: string }, enemyData: { deck: CardData[], unit: string }): GameState {
   return {
     turn: 1,
     isPlayerTurn: true,
@@ -162,20 +154,12 @@ export function createOnlineInitialState(playerData, enemyData) {
     setlist: [],
     enemyPlayedCard: null,
     isAnimating: false,
-    player: {
-      baseUnit: playerData.unit,
-      originalDeckNames: playerData.deck.map(c => c.曲名),
-      hp: 30, maxHp: 30, shield: 0, maxVoltage: 0, currentVoltage: 0, specialUsed: false,
-      deck: playerData.deck.slice(3), hand: playerData.deck.slice(0, 3), discard: [],
-      buffs: { damageImmune: false, nextCardCostDown: 0, turnCardsPlayed: [] }
-    },
-    enemy: {
-      baseUnit: enemyData.unit,
-      originalDeckNames: enemyData.deck.map(c => c.曲名),
-      hp: 30, maxHp: 30, shield: 0, maxVoltage: 0, currentVoltage: 0, specialUsed: false,
-      deck: enemyData.deck.slice(3), hand: enemyData.deck.slice(0, 3), discard: [],
-      buffs: { damageImmune: false, nextCardCostDown: 0, turnCardsPlayed: [] }
-    },
-    animations: { playerShake: false, enemyShake: false, damageTexts: [] }
+    battleResult: null, // ★追加してエラーを解消
+    player: createBasePlayerState(playerData.unit, playerData.deck),
+    enemy: createBasePlayerState(enemyData.unit, enemyData.deck),
+    animations: {
+      playerShake: false,
+      enemyShake: false
+    }
   };
 }

@@ -1,10 +1,10 @@
+// src/utils/battleEngine.ts
+import { GameState, PlayerState, CardData } from '../types';
 
-/**
- * Battle Engine for Link! Like! Battle!
- * Core logic for processing card effects and state updates.
- */
+// バトル中に一時的なコスト変動（costModifier）を持つカードのための型
+export type ActiveCardData = CardData & { costModifier?: number };
 
-export function getCalculatedCost(card, userState) {
+export function getCalculatedCost(card: ActiveCardData, userState: PlayerState): number {
   let cost = Number(card.コスト) || 0;
   
   const effect1 = card.効果1 || '';
@@ -47,7 +47,7 @@ export function getCalculatedCost(card, userState) {
   const unitPlayedCostMatch = combinedEffects.match(/ユニットが「(.+?)」のカードを使用している場合、コストを(\d+)にする/);
   if (unitPlayedCostMatch) {
     const unitName = unitPlayedCostMatch[1];
-    const hasPlayed = userState.buffs.turnCardsPlayedDetails?.some(c => c.歌唱 && c.歌唱.includes(unitName));
+    const hasPlayed = userState.buffs.turnCardsPlayedDetails?.some((c: any) => c.歌唱 && c.歌唱.includes(unitName));
     if (hasPlayed) {
         cost = parseInt(unitPlayedCostMatch[2], 10);
     }
@@ -57,11 +57,6 @@ export function getCalculatedCost(card, userState) {
   const voltageAboveCostMatch = combinedEffects.match(/ボルテージが(\d+)以上の時、コストを(\d+)にする/);
   if (voltageAboveCostMatch) {
     const req = parseInt(voltageAboveCostMatch[1], 10);
-    // Since this implies checking BEFORE playing the card, we check if currentVoltage (maybe + cost?) is >= req
-    // The previous implementation used (currentVoltage + card.コスト) >= 5 for 雨と体温. 
-    // We will just use the current voltage logic (using maxVoltage as per other rules, but cost is immediate).
-    // The spec says voltage check uses maxVoltage for effects, but for cost it might use currentVoltage. 
-    // Let's use maxVoltage for consistency.
     if (userState.maxVoltage >= req) {
       cost = parseInt(voltageAboveCostMatch[2], 10);
     }
@@ -91,12 +86,12 @@ export function getCalculatedCost(card, userState) {
   return Math.max(0, cost);
 }
 
-export function drawCard(userState) {
+export function drawCard(userState: PlayerState): { success: boolean, deckOut?: boolean, card?: CardData } {
   if (userState.deck.length === 0) {
     userState.hp = 0; 
     return { success: false, deckOut: true };
   }
-  const card = userState.deck.shift();
+  const card = userState.deck.shift() as CardData;
   if (userState.hand.length >= 8) {
     userState.discard.push(card);
   } else {
@@ -105,7 +100,7 @@ export function drawCard(userState) {
   return { success: true, card };
 }
 
-export function discardRandomFromHand(userState) {
+export function discardRandomFromHand(userState: PlayerState): CardData | null {
   if (userState.hand.length === 0) return null;
   const idx = Math.floor(Math.random() * userState.hand.length);
   const card = userState.hand.splice(idx, 1)[0];
@@ -113,20 +108,20 @@ export function discardRandomFromHand(userState) {
   return card;
 }
 
-export function applyCardEffects(state, card, isPlayer) {
-  const newState = JSON.parse(JSON.stringify(state)); // Deep clone
+export function applyCardEffects(state: GameState, card: ActiveCardData, isPlayer: boolean): { newState: GameState, events: any[] } {
+  const newState = JSON.parse(JSON.stringify(state)) as GameState; // Deep clone
   const user = isPlayer ? newState.player : newState.enemy;
   const target = isPlayer ? newState.enemy : newState.player;
-  const events = [];
+  const events: any[] = [];
 
-  const addEvent = (type, data) => events.push({ type, data, isPlayer });
+  const addEvent = (type: string, data: any) => events.push({ type, data, isPlayer });
 
-  const processEffects = (effectText) => {
+  const processEffects = (effectText?: string) => {
     if (!effectText) return;
 
     // --- 条件判定の汎用化 (正規表現) ---
     
-    // ボルテージ系効果 -> そのターンのMAXボルテージを基準にする
+    // ボルテージ系効果
     const voltageAboveMatch = effectText.match(/ボルテージが(\d+)以上の時/);
     if (voltageAboveMatch) {
       const threshold = parseInt(voltageAboveMatch[1], 10);
@@ -142,14 +137,12 @@ export function applyCardEffects(state, card, isPlayer) {
     const handLimitMatch = effectText.match(/手札が(\d+)枚以下の時/);
     if (handLimitMatch) {
       const limit = parseInt(handLimitMatch[1], 10);
-      // 使用カードも含めた手札枚数
       if ((user.hand.length + 1) > limit) return;
     }
 
     const handAboveMatch = effectText.match(/手札が(\d+)枚以上の時/);
     if (handAboveMatch) {
       const threshold = parseInt(handAboveMatch[1], 10);
-      // 使用カードも含めた手札枚数
       if ((user.hand.length + 1) < threshold) return;
     }
 
@@ -181,8 +174,6 @@ export function applyCardEffects(state, card, isPlayer) {
     }
 
     // --- 即時発動エフェクト ---
-    
-    // 古今東西: このターン中、使用したカードの数だけ相手にダメージを与える
     if (effectText.includes("使用したカードの数だけ相手にダメージを与える")) {
       const count = user.buffs.turnCardsPlayed.length;
       if (count > 0) {
@@ -242,20 +233,17 @@ export function applyCardEffects(state, card, isPlayer) {
     }
 
     if (effectText.includes("捨札からコスト4以下のカードを使用する") || effectText.includes("捨札からコスト4以下のカードを")) {
-      // Dear my future自身(使用中のカード)は選べない
       const candidates = user.discard.filter(c => (Number(c.コスト) || 0) <= 4 && c.id !== card.id);
       if (candidates.length > 0) {
         if (isPlayer) {
-          // プレイヤーの場合はUIで選択させる（イベントで通知）
           addEvent('discard_select', { maxCost: 4, reason: 'dear_my_future', excludeId: card.id });
         } else {
-          // CPUの場合はランダムに選択して効果発動
           const idx = Math.floor(Math.random() * candidates.length);
           const picked = candidates[idx];
           const discardIdx = user.discard.indexOf(picked);
           if (discardIdx !== -1) {
             user.discard.splice(discardIdx, 1);
-            user.discard.push(picked); // 使用後は捨て札へ
+            user.discard.push(picked);
             addEvent('draw', { name: picked.曲名, reason: 'dear_my_future_cpu' });
           }
         }
@@ -277,7 +265,7 @@ export function applyCardEffects(state, card, isPlayer) {
     }
 
     if (effectText.includes("手札を全て捨て、カードを3枚引く")) {
-      while (user.hand.length > 0) user.discard.push(user.hand.shift());
+      while (user.hand.length > 0) user.discard.push(user.hand.shift() as CardData);
       drawCard(user); drawCard(user); drawCard(user);
       addEvent('draw', { count: 3, reason: 'refresh' });
     }
@@ -285,7 +273,7 @@ export function applyCardEffects(state, card, isPlayer) {
     if (effectText.includes("みらくらぱーく！」のカードをランダムに1枚選び、コストを1下げる")) {
       const targets = user.hand.filter(c => c.歌唱 && c.歌唱.includes("みらくらぱーく"));
       if (targets.length > 0) {
-        const picked = targets[Math.floor(Math.random() * targets.length)];
+        const picked = targets[Math.floor(Math.random() * targets.length)] as ActiveCardData;
         picked.costModifier = (picked.costModifier || 0) - 1;
         addEvent('buff', { name: 'cost_down', target: picked.曲名 });
       }
@@ -326,7 +314,6 @@ export function applyCardEffects(state, card, isPlayer) {
       user.buffs.doubleNextEffect = true;
     }
 
-    // ドロー処理 (条件付きドロー以外)
     if (effectText.includes("カードを2枚引く") && !effectText.includes("ユニットが")) {
       drawCard(user); drawCard(user);
       addEvent('draw', { count: 2 });
@@ -368,7 +355,7 @@ export function applyCardEffects(state, card, isPlayer) {
     }
   };
 
-  function applyDamage(targetObj, value, eventAdder, type, isPlayerAction) {
+  function applyDamage(targetObj: PlayerState, value: number, eventAdder: (type: string, data: any) => void, type: string, isPlayerAction: boolean) {
     let dmg = value;
     if (targetObj.buffs.doubleDamageTakenThisTurn) {
       dmg *= 2;
@@ -399,12 +386,10 @@ export function applyCardEffects(state, card, isPlayer) {
   if (!user.buffs.turnCardsPlayedDetails) user.buffs.turnCardsPlayedDetails = [];
   user.buffs.turnCardsPlayedDetails.push({ 曲名: card.曲名, 歌唱: card.歌唱 });
 
-  // パッシブ: 梢ドロー
   if (user.buffs.kozueDrawActive && card.センター.includes("乙宗 梢")) {
     drawCard(user);
     addEvent('draw', { count: 1, reason: 'kozue' });
   }
-  // パッシブ: さやかダメージ
   if (user.buffs.sayakaDmgActive && (card.センター.includes("村野さやか") || card.センター.includes("村野 さやか"))) {
     applyDamage(target, 3, addEvent, 'sayaka', isPlayer);
   }
