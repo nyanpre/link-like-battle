@@ -1,5 +1,5 @@
 // src/components/screens/Battle.tsx
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react'; // ★ useStateを追加
 import { GameState, CardData } from '../../types';
 import { useBattleLogic } from '../../hooks/useBattleLogic';
 import { BattleBoard } from './BattleBoard';
@@ -18,6 +18,9 @@ interface BattleProps {
 
 export const Battle: React.FC<BattleProps> = (props) => {
   const isGuest = props.gameMode === 'online' && !props.isHost;
+  
+  // ★ フェーズ3：カウントダウン用のステート
+  const [disconnectCount, setDisconnectCount] = useState<number | null>(null);
 
   // 1. ゲスト用に生データを反転させる魔法の関数
   const flipState = (state: GameState | null) => {
@@ -34,73 +37,95 @@ export const Battle: React.FC<BattleProps> = (props) => {
     };
   };
 
-  // ★ フェーズ3：自分がブラウザを閉じた（または戻った）時に切断フラグをDBに即時書き込む
+  // ★ 自分が画面に戻ってきた時（復帰時）、自分の切断フラグが立っていたら下ろす（DBに復帰を通知）
+  useEffect(() => {
+    if (props.gameMode !== 'online' || !props.roomId || !props.gameState || props.gameState.battleResult) return;
+
+    const amIDisconnected = props.isHost ? props.gameState.hostDisconnected : props.gameState.guestDisconnected;
+    if (amIDisconnected) {
+      props.setGameState((current: any) => {
+        if (!current || current.battleResult) return current;
+        const nextState = {
+          ...current,
+          hostDisconnected: props.isHost ? false : current.hostDisconnected,
+          guestDisconnected: !props.isHost ? false : current.guestDisconnected,
+        };
+        updateGameStateToDB(props.roomId, nextState); // 復帰を相手に知らせる
+        return nextState;
+      });
+    }
+  }, [props.gameState?.hostDisconnected, props.gameState?.guestDisconnected, props.isHost, props.gameMode, props.roomId]);
+
+  // ★ 自分がブラウザを閉じた（または戻った）時に切断フラグをDBに即時書き込む
   useEffect(() => {
     if (props.gameMode !== 'online' || !props.roomId || props.gameState?.battleResult) return;
 
     const handleDisconnect = () => {
       props.setGameState((current: any) => {
         if (!current || current.battleResult) return current;
-
         const nextState = {
           ...current,
-          // 自分が属する側の切断フラグを真にする
           hostDisconnected: props.isHost ? true : current.hostDisconnected || false,
           guestDisconnected: !props.isHost ? true : current.guestDisconnected || false,
         };
-
-        // Firebase（DB）へ即座に送信して、自分は退出する
         updateGameStateToDB(props.roomId, nextState);
         return nextState;
       });
     };
 
-    // ブラウザのタブ閉じ・リロードを監視
     window.addEventListener('beforeunload', handleDisconnect);
-    
-    // ページ遷移（アンマウント）時も切断処理を走らせるクリーンアップ
     return () => {
       window.removeEventListener('beforeunload', handleDisconnect);
     };
   }, [props.gameMode, props.roomId, props.isHost, props.gameState?.battleResult]);
 
-  // ★ フェーズ3：「相手が切断したこと」をリアルタイムに検知して、自動的に自分を勝利にする処理
+  // ★ 「相手の切断」を検知して60秒の猶予タイマーを起動・管理する
   useEffect(() => {
     if (props.gameMode !== 'online' || !props.gameState || props.gameState.battleResult) return;
 
-    // 自分から見て、通信相手のフラグが立っているかチェック
     const isOpponentDisconnected = props.isHost 
       ? props.gameState.guestDisconnected 
       : props.gameState.hostDisconnected;
 
     if (isOpponentDisconnected) {
-      // 1秒間の猶予（バナー表示用）を持たせて、自動勝利を確定させる
-      const timer = setTimeout(() => {
-        props.setGameState((prev: any) => {
-          if (!prev || prev.battleResult) return prev;
-          
-          // 【超重要】DB上の生データ（ホスト視点）での勝敗を決定する
-          // ホストが残ったなら生データは「WIN」。ゲストが残ったなら生データは「LOSE」（ゲスト画面で反転してWINになる）
-          const finalResult = props.isHost ? 'WIN' : 'LOSE';
-          
-          const finalState = { ...prev, battleResult: finalResult };
-          updateGameStateToDB(props.roomId, finalState);
-          return finalState;
-        });
-      }, 1200);
+      // 切断を検知したら60秒セットしてカウントダウン開始
+      setDisconnectCount(60);
 
-      return () => clearTimeout(timer);
+      const interval = setInterval(() => {
+        setDisconnectCount((prev) => {
+          if (prev === null) return null;
+          
+          // タイムアップ！（0秒になったら勝利）
+          if (prev <= 1) {
+            clearInterval(interval);
+            props.setGameState((prevDB: any) => {
+              if (!prevDB || prevDB.battleResult) return prevDB;
+              const finalResult = props.isHost ? 'WIN' : 'LOSE';
+              const finalState = { ...prevDB, battleResult: finalResult };
+              updateGameStateToDB(props.roomId, finalState);
+              return finalState;
+            });
+            return 0;
+          }
+          return prev - 1; // 1秒減らす
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
+    } else {
+      // 相手が復帰した（または切断していない）場合はタイマーをリセット
+      setDisconnectCount(null);
     }
   }, [props.gameState?.hostDisconnected, props.gameState?.guestDisconnected, props.isHost, props.gameMode, props.roomId]);
 
   // 2. 自分がゲストなら、反転させたデータを使う
   const localGameState = isGuest ? flipState(props.gameState) : props.gameState;
 
-  // ★ フェーズ3演出：相手が切断状態の場合、UIフックを利用して特別バナーを割り込ませる
+  // ★ 相手が切断状態の場合、UIフックを利用して特別バナー（残り秒数）を割り込ませる
   if (localGameState && props.gameState) {
     const isOpponentDisconnected = props.isHost ? props.gameState.guestDisconnected : props.gameState.hostDisconnected;
-    if (isOpponentDisconnected && !props.gameState.battleResult) {
-      localGameState.turnBanner = "対戦相手の接続が切断されました...";
+    if (isOpponentDisconnected && !props.gameState.battleResult && disconnectCount !== null) {
+      localGameState.turnBanner = `相手の通信が切断されました。復帰を待っています... (残り${disconnectCount}秒)`;
     }
   }
 
@@ -124,8 +149,8 @@ export const Battle: React.FC<BattleProps> = (props) => {
 
   if (!localGameState) return null;
 
-  // 4. 操作の完全な排他制御
-  const isMyTurn = localGameState.isPlayerTurn && !localGameState.turnBanner && !localGameState.isCoinFlipPhase && !localGameState.isAnimating;
+  // 4. 操作の完全な排他制御（相手が切断中の間は操作もロックする）
+  const isMyTurn = localGameState.isPlayerTurn && !localGameState.turnBanner && !localGameState.isCoinFlipPhase && !localGameState.isAnimating && disconnectCount === null;
 
   const safeLogic = {
     ...logic,

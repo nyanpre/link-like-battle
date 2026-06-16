@@ -5,7 +5,6 @@ import cardData from './data.json';
 import './index.css';
 import { createRoom, watchRoomsList, joinRoom, setClientReady, startGameInDB, watchRoom } from './utils/firebase';
 
-// ★ 型定義とコンポーネントの読み込み
 import { GameState, CardData } from './types';
 import { Home } from './components/screens/Home';
 import { DeckBuilder } from './components/screens/DeckBuilder';
@@ -14,7 +13,6 @@ import { WaitingRoom } from './components/screens/WaitingRoom';
 import { Battle } from './components/screens/Battle';
 
 function App() {
-  // ★ useStateに型を指定して安全に
   const [screen, setScreen] = useState<string>('home');
   const [playerName, setPlayerName] = useState<string>('');
   const [gameMode, setGameMode] = useState<'cpu' | 'online' | null>(null);
@@ -31,6 +29,40 @@ function App() {
 
   const unsubscribeRoomRef = useRef<any>(null);
 
+  // ★ リコネクト機能：起動時にセッション（メモ）が残っていれば自動復帰する
+  useEffect(() => {
+    const sessionStr = localStorage.getItem('battleSession');
+    if (sessionStr) {
+      try {
+        const session = JSON.parse(sessionStr);
+        if (session.roomId) {
+          setRoomId(session.roomId);
+          setIsHost(session.isHost);
+          if (session.playerName) setPlayerName(session.playerName);
+          if (session.gameMode) setGameMode(session.gameMode);
+          // 部屋の監視処理を走らせるために一旦待機室に飛ばす（プレイ中なら自動でバトル画面へ遷移する）
+          setScreen('waitingRoom'); 
+        }
+      } catch (e) {
+        console.error('Session parse error:', e);
+      }
+    }
+  }, []);
+
+  // ★ リコネクト機能：ホーム画面に戻った時は完全にセッションを初期化する
+  useEffect(() => {
+    if (screen === 'home') {
+      localStorage.removeItem('battleSession');
+      setRoomId('');
+      setRoomData(null);
+      setGameState(null);
+      if (unsubscribeRoomRef.current) {
+        unsubscribeRoomRef.current();
+        unsubscribeRoomRef.current = null;
+      }
+    }
+  }, [screen]);
+
   // 通信対戦のロビールーム監視
   useEffect(() => {
     if (screen === 'lobby') {
@@ -44,7 +76,12 @@ function App() {
     if (!roomId || (screen !== 'waitingRoom' && screen !== 'battle')) return;
     
     unsubscribeRoomRef.current = watchRoom(roomId, (data: any) => {
-      if (!data) return;
+      if (!data) {
+        // ★ リコネクト機能：復帰しようとしたが、既に部屋が消滅（解散）していた場合の処理
+        alert("対戦ルームが既に終了または解散されています。");
+        setScreen('home');
+        return;
+      }
       setRoomData(data);
 
       if (data.status === 'playing' && data.gameState) {
@@ -141,6 +178,8 @@ function App() {
       setRoomId(newRoomId);
       setIsHost(true);
       setScreen('waitingRoom');
+      // ★ リコネクト機能：部屋を作成した時点でセッションを保存
+      localStorage.setItem('battleSession', JSON.stringify({ roomId: newRoomId, isHost: true, playerName, gameMode: 'online' }));
     } catch (error) {
       alert("部屋の作成に失敗しました");
     }
@@ -158,6 +197,8 @@ function App() {
       setRoomId(id);
       setIsHost(false);
       setScreen('waitingRoom');
+      // ★ リコネクト機能：部屋に入室した時点でセッションを保存
+      localStorage.setItem('battleSession', JSON.stringify({ roomId: id, isHost: false, playerName, gameMode: 'online' }));
     } catch (error: any) {
       alert(error.message);
     }
