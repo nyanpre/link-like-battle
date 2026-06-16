@@ -1,14 +1,15 @@
 // src/components/ui/CardPreviewModal.tsx
 import React from 'react';
+import { Shield, Zap, HeartPulse, Swords } from 'lucide-react';
 import { getCalculatedCost } from '../../utils/battleEngine';
 import { getCardBackground } from './Card';
-import { GameState, CardData } from '../../types'; // ★追加
+import { GameState, CardData } from '../../types';
 
 interface CardPreviewModalProps {
-  selectedCard: CardData | null; // ★ any を変更
-  gameState: GameState;          // ★ any を変更
-  playCard: (card: CardData, isPlayer: boolean) => void; // ★ any を変更
-  setSelectedCard: (card: CardData | null) => void;      // ★ any を変更
+  selectedCard: CardData | null;
+  gameState: GameState;
+  playCard: (card: CardData, isPlayer: boolean) => void;
+  setSelectedCard: (card: CardData | null) => void;
 }
 
 export const CardPreviewModal: React.FC<CardPreviewModalProps> = ({ selectedCard, gameState, playCard, setSelectedCard }) => {
@@ -27,10 +28,11 @@ export const CardPreviewModal: React.FC<CardPreviewModalProps> = ({ selectedCard
           <span>{selectedCard.センター}</span>
         </div>
         <div className="card-stats" style={{fontSize:'0.95rem', padding:'8px'}}>
-          {selectedCard.パワー && <span className="stat-item stat-power">⚔️{selectedCard.パワー}</span>}
-          {selectedCard.シールド && <span className="stat-item stat-shield">🛡️{selectedCard.シールド}</span>}
-          {selectedCard.ヒール && <span className="stat-item stat-heal">💖{selectedCard.ヒール}</span>}
-          {selectedCard.ダメージ && <span className="stat-item stat-damage">⚡{selectedCard.ダメージ}</span>}
+          {/* ★ 絵文字を白抜きアイコン（Lucide-react）に変更 */}
+          {selectedCard.パワー && <span className="stat-item stat-power"><Swords size={16}/> {selectedCard.パワー}</span>}
+          {selectedCard.シールド && <span className="stat-item stat-shield"><Shield size={16}/> {selectedCard.シールド}</span>}
+          {selectedCard.ヒール && <span className="stat-item stat-heal"><HeartPulse size={16}/> {selectedCard.ヒール}</span>}
+          {selectedCard.ダメージ && <span className="stat-item stat-damage"><Zap size={16}/> {selectedCard.ダメージ}</span>}
         </div>
         <div className="card-effect" style={{fontSize:'1.15rem', padding:'12px'}}>
           {selectedCard.効果1 && <div style={{marginBottom:'6px'}}>{selectedCard.効果1}</div>}

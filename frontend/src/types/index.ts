@@ -72,4 +72,6 @@ export interface GameState {
   };
   battleResult: 'WIN' | 'LOSE' | 'DRAW' | null;
   forceTurnEnd?: boolean;
+  hostDisconnected?: boolean;
+  guestDisconnected?: boolean;
 }

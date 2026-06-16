@@ -1,10 +1,10 @@
 // src/components/ui/PlayerStatus.tsx
 import React from 'react';
 import { Shield, Zap, Layers, Trash2, Play } from 'lucide-react';
-import { PlayerState } from '../../types'; // ★型をインポート
+import { PlayerState } from '../../types';
 
 interface PlayerStatusProps {
-  data: PlayerState; // ★ any を PlayerState に変更
+  data: PlayerState;
   isEnemy?: boolean;
   isShaking?: boolean;
   onDiscardClick: (owner: string) => void;
@@ -35,7 +35,8 @@ export const PlayerStatus: React.FC<PlayerStatusProps> = ({ data, isEnemy, isSha
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
            <span className="deck-stat" title="Played this turn"><Play size={14}/> {data.buffs.turnCardsPlayed.length}</span>
-           <span className="deck-stat" title="Took damage count"><Zap size={14} color="#ef4444"/> {data.buffs.tookDamageCount || 0}</span>
+           {/* ★ color を #ef4444 (赤) から #a855f7 (紫) に変更しました */}
+           <span className="deck-stat" title="Took damage count"><Zap size={14} color="#a855f7"/> {data.buffs.tookDamageCount || 0}</span>
         </div>
       </div>
     </div>

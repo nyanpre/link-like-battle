@@ -1,5 +1,6 @@
 // src/components/ui/Card.tsx
 import React from 'react';
+import { Swords, Shield, HeartPulse, Zap } from 'lucide-react';
 import { CardData } from '../../types';
 
 export function getCardBackground(singing: string) {
@@ -24,11 +25,10 @@ export const StandardCard: React.FC<{ card: CardData }> = ({ card }) => (
     <div className="card-cost">{card?.コスト}</div>
     <div className="card-title">{card?.曲名}</div>
     <div className="card-stats">
-      {/* ★ すべて絵文字アイコンに統一 */}
-      {card?.パワー && <span className="stat-power">⚔️ {card.パワー}</span>}
-      {card?.シールド && <span className="stat-shield">🛡️ {card.シールド}</span>}
-      {card?.ヒール && <span className="stat-heal">💖 {card.ヒール}</span>}
-      {card?.ダメージ && <span className="stat-damage">⚡ {card.ダメージ}</span>}
+      {card?.パワー && <span className="stat-power"><Swords size={12}/>{card.パワー}</span>}
+      {card?.シールド && <span className="stat-shield"><Shield size={12}/>{card.シールド}</span>}
+      {card?.ヒール && <span className="stat-heal"><HeartPulse size={12}/>{card.ヒール}</span>}
+      {card?.ダメージ && <span className="stat-damage"><Zap size={12}/>{card.ダメージ}</span>}
     </div>
     <div className="card-effect">{card?.効果1}</div>
   </div>
