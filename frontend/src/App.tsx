@@ -12,6 +12,40 @@ import { Lobby } from './components/screens/Lobby';
 import { WaitingRoom } from './components/screens/WaitingRoom';
 import { Battle } from './components/screens/Battle';
 
+// ★ Firebaseの罠（空の配列を勝手に消す仕様）対策：データを安全な形に修復する関数
+const sanitizeGameState = (state: any): GameState => {
+  if (!state) return state;
+  return {
+    ...state,
+    setlist: state.setlist || [],
+    animations: state.animations || {},
+    player: {
+      ...state.player,
+      hand: state.player?.hand || [],
+      deck: state.player?.deck || [],
+      discard: state.player?.discard || [],
+      buffs: {
+        ...state.player?.buffs,
+        turnCardsPlayed: state.player?.buffs?.turnCardsPlayed || [],
+        turnCardsPlayedDetails: state.player?.buffs?.turnCardsPlayedDetails || [],
+        queuedEndTurnEffects: state.player?.buffs?.queuedEndTurnEffects || [],
+      }
+    },
+    enemy: {
+      ...state.enemy,
+      hand: state.enemy?.hand || [],
+      deck: state.enemy?.deck || [],
+      discard: state.enemy?.discard || [],
+      buffs: {
+        ...state.enemy?.buffs,
+        turnCardsPlayed: state.enemy?.buffs?.turnCardsPlayed || [],
+        turnCardsPlayedDetails: state.enemy?.buffs?.turnCardsPlayedDetails || [],
+        queuedEndTurnEffects: state.enemy?.buffs?.queuedEndTurnEffects || [],
+      }
+    }
+  };
+};
+
 function App() {
   const [screen, setScreen] = useState<string>('home');
   const [playerName, setPlayerName] = useState<string>('');
@@ -29,7 +63,7 @@ function App() {
 
   const unsubscribeRoomRef = useRef<any>(null);
 
-  // ★ リコネクト機能：起動時にセッション（メモ）が残っていれば自動復帰する
+  // リコネクト機能：起動時にセッションが残っていれば自動復帰する
   useEffect(() => {
     const sessionStr = localStorage.getItem('battleSession');
     if (sessionStr) {
@@ -40,7 +74,6 @@ function App() {
           setIsHost(session.isHost);
           if (session.playerName) setPlayerName(session.playerName);
           if (session.gameMode) setGameMode(session.gameMode);
-          // 部屋の監視処理を走らせるために一旦待機室に飛ばす（プレイ中なら自動でバトル画面へ遷移する）
           setScreen('waitingRoom'); 
         }
       } catch (e) {
@@ -49,7 +82,7 @@ function App() {
     }
   }, []);
 
-  // ★ リコネクト機能：ホーム画面に戻った時は完全にセッションを初期化する
+  // リコネクト機能：ホーム画面に戻った時は完全にセッションを初期化する
   useEffect(() => {
     if (screen === 'home') {
       localStorage.removeItem('battleSession');
@@ -71,13 +104,12 @@ function App() {
     }
   }, [screen]);
 
-  // 通信対戦のゲーム状態監視
+  // ★ 修正：通信対戦のゲーム状態監視
   useEffect(() => {
     if (!roomId || (screen !== 'waitingRoom' && screen !== 'battle')) return;
     
     unsubscribeRoomRef.current = watchRoom(roomId, (data: any) => {
       if (!data) {
-        // ★ リコネクト機能：復帰しようとしたが、既に部屋が消滅（解散）していた場合の処理
         alert("対戦ルームが既に終了または解散されています。");
         setScreen('home');
         return;
@@ -85,23 +117,12 @@ function App() {
       setRoomData(data);
 
       if (data.status === 'playing' && data.gameState) {
-        if (isHost) {
-          setGameState(data.gameState);
-        } else {
-          // クライアント側は画面を反転して表示
-          const flippedState = {
-            ...data.gameState,
-            player: data.gameState.enemy,
-            enemy: data.gameState.player,
-            isPlayerTurn: !data.gameState.isPlayerTurn,
-            setlist: data.gameState.setlist.map((log: any) => ({ ...log, owner: log.owner === 'player' ? 'enemy' : 'player' })),
-            turnBanner: data.gameState.turnBanner === "YOU FIRST!" ? "ENEMY FIRST!" : 
-                        data.gameState.turnBanner === "CPU FIRST!" ? "YOU FIRST!" : 
-                        data.gameState.turnBanner === "YOUR TURN" ? "ENEMY TURN" :
-                        data.gameState.turnBanner === "CPU TURN" ? "YOUR TURN" : data.gameState.turnBanner
-          };
-          setGameState(flippedState);
-        }
+        // ① Firebaseに消された「空の配列」を修復！これで白画面を防ぎます。
+        const safeState = sanitizeGameState(data.gameState);
+        
+        // ② App.tsxの中での「反転処理（flip）」は削除。そのまま丸投げします。（反転はBattle.tsxが勝手にやってくれます）
+        setGameState(safeState);
+        
         if (screen !== 'battle') setScreen('battle');
       }
     });
@@ -109,7 +130,7 @@ function App() {
     return () => {
       if (unsubscribeRoomRef.current) unsubscribeRoomRef.current();
     };
-  }, [roomId, isHost, screen]);
+  }, [roomId, screen]);
 
   // デッキ構築用ロジック
   const availableCards = selectedUnit ? getAvailableCards(selectedUnit) : [];
@@ -166,7 +187,6 @@ function App() {
   };
 
   // Firebase通信対戦用のルーム作成・参加ロジック
-  // Firebase通信対戦用のルーム作成・参加ロジック
   const handleCreateRoom = async () => {
     try {
       const playerCardNames: string[] = [];
@@ -181,7 +201,6 @@ function App() {
       setScreen('waitingRoom');
       localStorage.setItem('battleSession', JSON.stringify({ roomId: newRoomId, isHost: true, playerName, gameMode: 'online' }));
     } catch (error: any) {
-      // ★ エラーの本当の理由をコンソールに出力し、アラートにも表示する
       console.error("部屋作成エラーの詳細:", error);
       alert("部屋の作成に失敗しました:\n" + error.message);
     }
@@ -199,7 +218,6 @@ function App() {
       setRoomId(id);
       setIsHost(false);
       setScreen('waitingRoom');
-      // ★ リコネクト機能：部屋に入室した時点でセッションを保存
       localStorage.setItem('battleSession', JSON.stringify({ roomId: id, isHost: false, playerName, gameMode: 'online' }));
     } catch (error: any) {
       alert(error.message);
