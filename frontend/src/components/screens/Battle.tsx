@@ -147,7 +147,13 @@ export const Battle: React.FC<BattleProps> = (props) => {
     },
     syncDB: (fakedState: GameState) => {
       const realState = isGuest ? flipState(fakedState) : fakedState;
-      updateGameStateToDB(props.roomId, realState as GameState);
+      
+      // ★ 追加：Firebaseをクラッシュさせる「undefined」を、安全な「null」に全自動で変換するフィルター
+      const safeState = JSON.parse(JSON.stringify(realState, (_, value) => 
+        value === undefined ? null : value
+      ));
+      
+      updateGameStateToDB(props.roomId, safeState);
     }
   });
 
