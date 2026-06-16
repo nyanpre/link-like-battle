@@ -22,7 +22,9 @@ export const Lobby: React.FC<LobbyProps> = ({ roomsList, handleCreateRoom, handl
         </div>
       ))}
     </div>
-    <button style={{ marginTop: '2rem', padding: '10px', background: 'none', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }} onClick={() => setScreen('home')}>
+    <button style={{ marginTop: '2rem', padding: '10px', background: 'none', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }} 
+      onClick={() => setScreen('deckBuilder')} // ★ 'home' から 'deckBuilder' に変更！
+    >
       戻る
     </button>
   </div>

@@ -166,6 +166,7 @@ function App() {
   };
 
   // Firebase通信対戦用のルーム作成・参加ロジック
+  // Firebase通信対戦用のルーム作成・参加ロジック
   const handleCreateRoom = async () => {
     try {
       const playerCardNames: string[] = [];
@@ -178,10 +179,11 @@ function App() {
       setRoomId(newRoomId);
       setIsHost(true);
       setScreen('waitingRoom');
-      // ★ リコネクト機能：部屋を作成した時点でセッションを保存
       localStorage.setItem('battleSession', JSON.stringify({ roomId: newRoomId, isHost: true, playerName, gameMode: 'online' }));
-    } catch (error) {
-      alert("部屋の作成に失敗しました");
+    } catch (error: any) {
+      // ★ エラーの本当の理由をコンソールに出力し、アラートにも表示する
+      console.error("部屋作成エラーの詳細:", error);
+      alert("部屋の作成に失敗しました:\n" + error.message);
     }
   };
 
