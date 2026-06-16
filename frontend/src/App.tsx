@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createInitialState, getAvailableCards, buildDeckFromList, STARTER_DECKS, generateCPUDeck, createOnlineInitialState } from './utils/gameLogic';
 import cardData from './data.json';
 import './index.css';
-import { createRoom, watchRoomsList, joinRoom, setClientReady, startGameInDB, watchRoom } from './utils/firebase';
+import { createRoom, watchRoomsList, joinRoom, startGameInDB, watchRoom } from './utils/firebase';
 
 import { GameState, CardData } from './types';
 import { Home } from './components/screens/Home';
@@ -194,9 +194,9 @@ function App() {
         for (let i = 0; i < count; i++) playerCardNames.push(name);
       });
       const playerDeck = buildDeckFromList(playerCardNames);
-      
-      const newRoomId = await createRoom({ deck: playerDeck, unit: selectedUnit }, playerName);
+      const newRoomId = await createRoom({ deck: playerDeck, unit: selectedUnit || '' }, playerName);
       setRoomId(newRoomId);
+
       setIsHost(true);
       setScreen('waitingRoom');
       localStorage.setItem('battleSession', JSON.stringify({ roomId: newRoomId, isHost: true, playerName, gameMode: 'online' }));
@@ -214,7 +214,8 @@ function App() {
       });
       const playerDeck = buildDeckFromList(playerCardNames);
       
-      await joinRoom(id, { deck: playerDeck, unit: selectedUnit }, playerName);
+      // unit: selectedUnit || '' に変更
+      await joinRoom(id, { deck: playerDeck, unit: selectedUnit || '' }, playerName);
       setRoomId(id);
       setIsHost(false);
       setScreen('waitingRoom');

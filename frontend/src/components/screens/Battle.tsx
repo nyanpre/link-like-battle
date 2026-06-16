@@ -32,7 +32,7 @@ export const Battle: React.FC<BattleProps> = (props) => {
       isPlayerTurn: !state.isPlayerTurn, 
 
       // ★ ここを追加！相手がWINなら自分はLOSE、相手がLOSEなら自分はWINに変換する
-      battleResult: state.battleResult === 'WIN' ? 'LOSE' : state.battleResult === 'LOSE' ? 'WIN' : state.battleResult,
+      battleResult: (state.battleResult === 'WIN' ? 'LOSE' : state.battleResult === 'LOSE' ? 'WIN' : state.battleResult) as 'WIN' | 'LOSE' | 'DRAW' | null,
 
       turnBanner: state.turnBanner?.includes("YOU") ? state.turnBanner.replace("YOU", "ENEMY") :
                   state.turnBanner?.includes("YOUR") ? state.turnBanner.replace("YOUR", "ENEMY") :

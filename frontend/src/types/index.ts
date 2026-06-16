@@ -27,10 +27,10 @@ export interface PlayerBuffs {
   onyourmark102Active?: boolean;
   yupYupYupActive?: boolean;
   tookDamageThisTurn?: boolean;
-  tookDamageCount: number;
+  tookDamageCount?: number;       // ★ ? を追加 (Firebase通信対策)
   tookDamageAmount?: number;
-  nextCardCostDown: number;
-  turnCardsPlayed: string[]; // そのターンにプレイしたカード名のリスト
+  nextCardCostDown?: number;      // ★ ? を追加
+  turnCardsPlayed?: string[];     // ★ ? を追加
   queuedEndTurnEffects?: any[];
   setEnemyVoltage3?: boolean;
   [key: string]: any; // その他の特殊バフ用
@@ -66,9 +66,10 @@ export interface GameState {
   setlist: { card: CardData; owner: 'player' | 'enemy' }[];
   enemyPlayedCard: CardData | null;
   isAnimating: boolean;
-  animations: {
+  animations?: {                 // ★ ? を追加
     playerShake?: boolean;
     enemyShake?: boolean;
+    [key: string]: any;          // ★ 予期せぬアニメーション追加にも耐えられるように
   };
   battleResult: 'WIN' | 'LOSE' | 'DRAW' | null;
   forceTurnEnd?: boolean;
