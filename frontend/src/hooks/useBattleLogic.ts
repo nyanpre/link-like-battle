@@ -166,10 +166,12 @@ export const useBattleLogic = ({
 
       if (newTarget.buffs.cannotDrawNextTurn) {
         newTarget.buffs.cannotDrawNextTurn = false;
-        return {
+        const newState = {
           ...prev, isPlayerTurn: isPlayer, turnBanner: isPlayer ? "YOUR TURN (NO DRAW)" : (gameMode === 'cpu' ? "CPU TURN (NO DRAW)" : "ENEMY TURN (NO DRAW)"),
           setlist: [], enemyPlayedCard: null, player: isPlayer ? newTarget : newPrevTarget, enemy: isPlayer ? newPrevTarget : newTarget, turn: nextGlobalTurn
         };
+        if (gameMode === 'online' && syncDB) syncDB(newState); // ★ 追加：ターン移行を相手に送信
+        return newState;
       }
       
       if (newPrevTarget.buffs.setEnemyVoltage3) { newTarget.currentVoltage = 3; newPrevTarget.buffs.setEnemyVoltage3 = false; }
@@ -181,10 +183,12 @@ export const useBattleLogic = ({
         }
       }
       
-      return {
+      const newState = {
         ...prev, isPlayerTurn: isPlayer, turnBanner: isPlayer ? "YOUR TURN" : (gameMode === 'cpu' ? "CPU TURN" : "ENEMY TURN"),
         setlist: [], enemyPlayedCard: null, player: isPlayer ? newTarget : newPrevTarget, enemy: isPlayer ? newPrevTarget : newTarget, turn: nextGlobalTurn
       };
+      if (gameMode === 'online' && syncDB) syncDB(newState); // ★ 追加：ターン移行を相手に送信
+      return newState;
     });
   };
 

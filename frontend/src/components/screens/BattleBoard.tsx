@@ -50,14 +50,14 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
       </div>
 
       <div className="game-container">
-        {/* ★ 降参ボタン（画面左上にフローティング配置） */}
+        {/* ★ 降参ボタン（画面右上にフローティング配置） */}
         {!gameState.battleResult && (
           <button
             onClick={handleSurrender}
             style={{
               position: 'absolute',
               top: '12px',
-              left: '12px',
+              right: '12px', // ★ ここを left から right に変更！
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
