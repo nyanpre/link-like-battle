@@ -264,51 +264,60 @@ function App() {
   // ===== 画面の出し分け =====
   // ==========================================
   
-  // 1. Firebaseにログイン状態を確認している間のローディング画面
-  if (authLoading) {
-    return <div style={{ height: '100vh', backgroundColor: '#111827', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white' }}>Loading...</div>;
-  }
+  const renderContent = () => {
+    // 1. Firebaseにログイン状態を確認している間のローディング画面
+    if (authLoading) {
+      return <div style={{ height: '100%', width: '100%', backgroundColor: '#111827', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white' }}>Loading...</div>;
+    }
 
-  // 2. ログインしていない場合は必ずログイン画面を表示
-  if (!user) {
-    return <Auth />;
-  }
+    // 2. ログインしていない場合は必ずログイン画面を表示
+    if (!user) {
+      return <Auth />;
+    }
 
-  // 3. ログイン済みなら各画面を表示
-  if (screen === 'home') {
-    return <Home playerName={playerName} setPlayerName={setPlayerName} setGameMode={setGameMode as any} setScreen={setScreen as any} user={user} />; // ★ user={user} を追加
-  }
+    // 3. ログイン済みなら各画面を表示
+    if (screen === 'home') {
+      return <Home playerName={playerName} setPlayerName={setPlayerName} setGameMode={setGameMode as any} setScreen={setScreen as any} user={user} />;
+    }
 
-  if (screen === 'lobby') {
-    return <Lobby roomsList={roomsList} handleCreateRoom={handleCreateRoom} handleJoinRoom={handleJoinRoom} setScreen={setScreen} />;
-  }
+    if (screen === 'lobby') {
+      return <Lobby roomsList={roomsList} handleCreateRoom={handleCreateRoom} handleJoinRoom={handleJoinRoom} setScreen={setScreen} />;
+    }
 
-  if (screen === 'waitingRoom') {
-    return <WaitingRoom isHost={isHost} playerName={playerName} roomData={roomData} roomId={roomId} handleHostStartGame={handleHostStartGame} />;
-  }
+    if (screen === 'waitingRoom') {
+      return <WaitingRoom isHost={isHost} playerName={playerName} roomData={roomData} roomId={roomId} handleHostStartGame={handleHostStartGame} />;
+    }
 
-  if (screen === 'deckBuilder') {
-    return (
-      <DeckBuilder
-        gameMode={gameMode} setScreen={setScreen} deckTotal={deckTotal} selectedUnit={selectedUnit} setSelectedUnit={setSelectedUnit}
-        manaCurve={manaCurve} maxManaCount={maxManaCount} handleDeckComplete={handleDeckComplete} loadStarterDeck={loadStarterDeck}
-        deckList={deckList} setDeckList={setDeckList} availableCards={availableCards} selectedCard={selectedCard} setSelectedCard={setSelectedCard}
-        removeCardFromDeck={removeCardFromDeck} addCardToDeck={addCardToDeck}
-        user={user}
-      />
-    );
-  }
+    if (screen === 'deckBuilder') {
+      return (
+        <DeckBuilder
+          gameMode={gameMode} setScreen={setScreen} deckTotal={deckTotal} selectedUnit={selectedUnit} setSelectedUnit={setSelectedUnit}
+          manaCurve={manaCurve} maxManaCount={maxManaCount} handleDeckComplete={handleDeckComplete} loadStarterDeck={loadStarterDeck}
+          deckList={deckList} setDeckList={setDeckList} availableCards={availableCards} selectedCard={selectedCard} setSelectedCard={setSelectedCard}
+          removeCardFromDeck={removeCardFromDeck} addCardToDeck={addCardToDeck}
+          user={user}
+        />
+      );
+    }
 
-  if (screen === 'battle' && gameState) {
-    return (
-      <Battle
-        gameState={gameState} setGameState={setGameState} gameMode={gameMode} roomId={roomId} isHost={isHost}
-        setScreen={setScreen} selectedCard={selectedCard} setSelectedCard={setSelectedCard}
-      />
-    );
-  }
+    if (screen === 'battle' && gameState) {
+      return (
+        <Battle
+          gameState={gameState} setGameState={setGameState} gameMode={gameMode} roomId={roomId} isHost={isHost}
+          setScreen={setScreen} selectedCard={selectedCard} setSelectedCard={setSelectedCard}
+        />
+      );
+    }
 
-  return null;
+    return null;
+  };
+
+  return (
+    // ★ ここで全体の要素を .app-wrapper で囲み、80%縮小＋中央配置を適用します
+    <div className="app-wrapper">
+      {renderContent()}
+    </div>
+  );
 }
 
 export default App;
