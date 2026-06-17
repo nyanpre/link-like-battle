@@ -276,7 +276,7 @@ function App() {
 
   // 3. ログイン済みなら各画面を表示
   if (screen === 'home') {
-    return <Home playerName={playerName} setPlayerName={setPlayerName} setGameMode={setGameMode as any} setScreen={setScreen as any} />;
+    return <Home playerName={playerName} setPlayerName={setPlayerName} setGameMode={setGameMode as any} setScreen={setScreen as any} user={user} />; // ★ user={user} を追加
   }
 
   if (screen === 'lobby') {
@@ -294,6 +294,7 @@ function App() {
         manaCurve={manaCurve} maxManaCount={maxManaCount} handleDeckComplete={handleDeckComplete} loadStarterDeck={loadStarterDeck}
         deckList={deckList} setDeckList={setDeckList} availableCards={availableCards} selectedCard={selectedCard} setSelectedCard={setSelectedCard}
         removeCardFromDeck={removeCardFromDeck} addCardToDeck={addCardToDeck}
+        user={user}
       />
     );
   }
