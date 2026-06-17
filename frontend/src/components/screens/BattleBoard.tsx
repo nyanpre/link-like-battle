@@ -1,5 +1,5 @@
 // src/components/screens/BattleBoard.tsx
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Smartphone, Flag } from 'lucide-react';
 import { GameState, CardData } from '../../types';
 import { StandardCard } from '../ui/Card';
@@ -41,26 +41,6 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
   damageTexts, showDiscard, setShowDiscard, overdrawnCards, selectFromDiscard, setSelectFromDiscard,
   endTurnPlayer, playCard, playCardFromDiscard, handleRematch, handleSpSkill, handleSurrender
 }) => {
-  // ★ 追加：ブラウザ判定と上部スペース計算
-  const [topSpace, setTopSpace] = useState(0);
-
-  useEffect(() => {
-    // PWA（ホーム画面から起動）かどうかを判定
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || ('standalone' in window.navigator && (window.navigator as any).standalone === true);
-    
-    // フルスクリーン（PWA）でない場合のみスペースを追加
-    if (!isStandalone) {
-      const ua = navigator.userAgent.toLowerCase();
-      const isChrome = ua.indexOf('chrome') !== -1 || ua.indexOf('crios') !== -1;
-      const isSafari = ua.indexOf('safari') !== -1 && !isChrome;
-
-      if (isSafari) {
-        setTopSpace(10);
-      } else if (isChrome) {
-        setTopSpace(5);
-      }
-    }
-  }, []);
 
   return (
     <>
@@ -71,16 +51,12 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
       </div>
 
       <div className="game-container">
-        {/* ★ 追加：ブラウザUI回避用の透明スペーサー（画面全体を自然に押し下げる） */}
-        {topSpace > 0 && <div style={{ height: `${topSpace}px`, width: '100%', flexShrink: 0 }} />}
-
-        {/* ★ 変更：降参ボタンのtop位置を自動調整 */}
         {!gameState.battleResult && (
           <button
             onClick={handleSurrender}
             style={{
               position: 'absolute',
-              top: `${12 + topSpace}px`,
+              top: '12px',
               right: '12px',
               display: 'flex',
               alignItems: 'center',
@@ -126,8 +102,7 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
           </div>
         ))}
 
-        {/* ★ 変更：相手の手札もスペース分だけ下げる */}
-        <div className="enemy-hand-container" style={{ top: `calc(-40px + ${topSpace}px)` }}>
+        <div className="enemy-hand-container" style={{ top: '-40px' }}>
           {gameState.enemy.hand.map((_: any, i: number) => (
             <div key={i} className="enemy-card-back"></div>
           ))}
