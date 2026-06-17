@@ -1,5 +1,6 @@
 // src/components/screens/Home.tsx
 import React from 'react';
+import { logoutFromGame } from '../../utils/firebase';
 
 // 親（App.tsx）から受け取るデータの「型」を定義します
 interface HomeProps {
@@ -36,6 +37,29 @@ export const Home: React.FC<HomeProps> = ({
           通信対戦で遊ぶ
         </button>
       </div>
+
+      {/* ★ 追加：ログイン画面へ戻る（ログアウト）ボタン */}
+      <button
+        onClick={async () => {
+          if (window.confirm('ログイン画面に戻りますか？\n（※ゲストで作成したデータから離れます）')) {
+            await logoutFromGame();
+          }
+        }}
+        style={{
+          position: 'absolute',
+          bottom: '16px',
+          right: '16px',
+          padding: '8px 16px',
+          backgroundColor: 'transparent',
+          color: '#9ca3af',
+          border: '1px solid #4b5563',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontSize: '0.875rem'
+        }}
+      >
+        ログイン / アカウント切替
+      </button>
     </div>
   );
 };

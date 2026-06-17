@@ -1,7 +1,16 @@
 // src/utils/firebase.ts
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, set, onValue, get, update, remove } from 'firebase/database';
-import { GameState, CardData } from '../types'; // ★ 型のインポート
+import { 
+  getAuth, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signInAnonymously, 
+  signOut, 
+  onAuthStateChanged,
+  User
+} from 'firebase/auth'; // ★ auth関連のインポートを上部にまとめました
+import { GameState, CardData } from '../types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAb1mwHVwbxJbbf2WAFlqclFPGRUid4Oeg",
@@ -15,14 +24,13 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app); // ★ authの初期化もここに移動
 
-// ★ デッキデータの型定義
 export interface DeckData {
   deck: CardData[];
   unit: string;
 }
 
-// ★ 部屋情報の型定義
 export interface RoomData {
   id?: string;
   status: 'waiting' | 'ready' | 'playing';
@@ -34,7 +42,6 @@ export interface RoomData {
   gameState: GameState | null;
 }
 
-// 部屋を作成する（ホスト）
 export const createRoom = async (hostDeckData: DeckData, hostName: string): Promise<string> => {
   const roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
   const roomRef = ref(db, `rooms/${roomId}`);
@@ -53,7 +60,6 @@ export const createRoom = async (hostDeckData: DeckData, hostName: string): Prom
   return roomId;
 };
 
-// 待機中の部屋一覧をリアルタイム取得
 export const watchRoomsList = (callback: (rooms: RoomData[]) => void) => {
   const roomsRef = ref(db, 'rooms');
   return onValue(roomsRef, (snapshot) => {
@@ -70,7 +76,6 @@ export const watchRoomsList = (callback: (rooms: RoomData[]) => void) => {
   });
 };
 
-// 部屋に参加する（クライアント）
 export const joinRoom = async (roomId: string, clientDeckData: DeckData, clientName: string): Promise<void> => {
   const roomRef = ref(db, `rooms/${roomId}`);
   const snapshot = await get(roomRef);
@@ -87,12 +92,10 @@ export const joinRoom = async (roomId: string, clientDeckData: DeckData, clientN
   });
 };
 
-// クライアントが準備OKを押した時
 export const setClientReady = async (roomId: string): Promise<void> => {
   await update(ref(db, `rooms/${roomId}`), { status: 'ready' });
 };
 
-// ホストがバトル開始を押した時
 export const startGameInDB = async (roomId: string, initialState: GameState): Promise<void> => {
   await update(ref(db, `rooms/${roomId}`), {
     status: 'playing',
@@ -100,7 +103,6 @@ export const startGameInDB = async (roomId: string, initialState: GameState): Pr
   });
 };
 
-// 特定の部屋の状態を監視（ホスト・クライアント共通）
 export const watchRoom = (roomId: string, callback: (data: RoomData | null) => void) => {
   return onValue(ref(db, `rooms/${roomId}`), (snapshot) => {
     callback(snapshot.val());
@@ -113,4 +115,46 @@ export const updateGameStateToDB = async (roomId: string, newGameState: GameStat
 
 export const deleteRoom = async (roomId: string): Promise<void> => {
   await remove(ref(db, `rooms/${roomId}`));
+};
+
+// ==========================================
+// 認証・アカウント関連の関数群
+// ==========================================
+
+export const signUpWithEmail = async (email: string, password: string): Promise<User> => {
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  return userCredential.user;
+};
+
+export const loginWithEmail = async (email: string, password: string): Promise<User> => {
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  return userCredential.user;
+};
+
+export const loginAsGuest = async (): Promise<User> => {
+  const userCredential = await signInAnonymously(auth);
+  return userCredential.user;
+};
+
+export const logoutFromGame = async (): Promise<void> => {
+  await signOut(auth);
+};
+
+export const watchAuthState = (callback: (user: User | null) => void) => {
+  return onAuthStateChanged(auth, callback);
+};
+
+export const saveDecksToDB = async (uid: string, decks: any[]): Promise<void> => {
+  const userDecksRef = ref(db, `users/${uid}/decks`);
+  const safeDecks = JSON.parse(JSON.stringify(decks, (_, value) => value === undefined ? null : value));
+  await set(userDecksRef, safeDecks);
+};
+
+export const loadDecksFromDB = async (uid: string): Promise<any[]> => {
+  const userDecksRef = ref(db, `users/${uid}/decks`);
+  const snapshot = await get(userDecksRef);
+  if (snapshot.exists()) {
+    return snapshot.val() || [];
+  }
+  return [];
 };

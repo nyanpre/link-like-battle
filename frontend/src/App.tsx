@@ -3,7 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 import { createInitialState, getAvailableCards, buildDeckFromList, STARTER_DECKS, generateCPUDeck, createOnlineInitialState } from './utils/gameLogic';
 import cardData from './data.json';
 import './index.css';
-import { createRoom, watchRoomsList, joinRoom, startGameInDB, watchRoom } from './utils/firebase';
+
+// ★ Firebase関連のインポートを1つに綺麗にまとめました
+import { createRoom, watchRoomsList, joinRoom, startGameInDB, watchRoom, watchAuthState } from './utils/firebase';
 
 import { GameState, CardData } from './types';
 import { Home } from './components/screens/Home';
@@ -12,7 +14,10 @@ import { Lobby } from './components/screens/Lobby';
 import { WaitingRoom } from './components/screens/WaitingRoom';
 import { Battle } from './components/screens/Battle';
 
-// ★ Firebaseの罠（空の配列を勝手に消す仕様）対策：データを安全な形に修復する関数
+// ★ ログイン画面のインポート
+import { Auth } from './components/screens/Auth';
+
+// Firebaseの罠（空の配列を勝手に消す仕様）対策：データを安全な形に修復する関数
 const sanitizeGameState = (state: any): GameState => {
   if (!state) return state;
   return {
@@ -47,6 +52,12 @@ const sanitizeGameState = (state: any): GameState => {
 };
 
 function App() {
+  // ==========================================
+  // ★ 追加：認証（ログイン）用のステート
+  // ==========================================
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   const [screen, setScreen] = useState<string>('home');
   const [playerName, setPlayerName] = useState<string>('');
   const [gameMode, setGameMode] = useState<'cpu' | 'online' | null>(null);
@@ -62,6 +73,17 @@ function App() {
   const [roomData, setRoomData] = useState<any>(null);
 
   const unsubscribeRoomRef = useRef<any>(null);
+
+  // ==========================================
+  // ★ 追加：起動時にログイン状態をチェックする
+  // ==========================================
+  useEffect(() => {
+    const unsubscribe = watchAuthState((currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false); // チェック完了
+    });
+    return () => unsubscribe();
+  }, []);
 
   // リコネクト機能：起動時にセッションが残っていれば自動復帰する
   useEffect(() => {
@@ -104,7 +126,7 @@ function App() {
     }
   }, [screen]);
 
-  // ★ 修正：通信対戦のゲーム状態監視
+  // 通信対戦のゲーム状態監視
   useEffect(() => {
     if (!roomId || (screen !== 'waitingRoom' && screen !== 'battle')) return;
     
@@ -117,10 +139,7 @@ function App() {
       setRoomData(data);
 
       if (data.status === 'playing' && data.gameState) {
-        // ① Firebaseに消された「空の配列」を修復！これで白画面を防ぎます。
         const safeState = sanitizeGameState(data.gameState);
-        
-        // ② App.tsxの中での「反転処理（flip）」は削除。そのまま丸投げします。（反転はBattle.tsxが勝手にやってくれます）
         setGameState(safeState);
         
         if (screen !== 'battle') setScreen('battle');
@@ -214,7 +233,6 @@ function App() {
       });
       const playerDeck = buildDeckFromList(playerCardNames);
       
-      // unit: selectedUnit || '' に変更
       await joinRoom(id, { deck: playerDeck, unit: selectedUnit || '' }, playerName);
       setRoomId(id);
       setIsHost(false);
@@ -242,7 +260,21 @@ function App() {
   });
   const maxManaCount = Math.max(1, ...manaCurve);
 
+  // ==========================================
   // ===== 画面の出し分け =====
+  // ==========================================
+  
+  // 1. Firebaseにログイン状態を確認している間のローディング画面
+  if (authLoading) {
+    return <div style={{ height: '100vh', backgroundColor: '#111827', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white' }}>Loading...</div>;
+  }
+
+  // 2. ログインしていない場合は必ずログイン画面を表示
+  if (!user) {
+    return <Auth />;
+  }
+
+  // 3. ログイン済みなら各画面を表示
   if (screen === 'home') {
     return <Home playerName={playerName} setPlayerName={setPlayerName} setGameMode={setGameMode as any} setScreen={setScreen as any} />;
   }
