@@ -36,7 +36,6 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   removeCardFromDeck, addCardToDeck,
   user
 }) => {
-  // ★ 追加：現在編集中のデッキ名を管理
   const [currentDeckName, setCurrentDeckName] = useState('新規デッキ');
 
   return (
@@ -46,15 +45,20 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         <h2 style={{marginTop:'1rem'}}>画面を横向きにしてください</h2>
         <p>このゲームは横画面専用です</p>
       </div>
-      <div className="deck-builder-screen">
-        <div className="deck-builder-sticky-header" style={{position:'sticky', top:0, background:'#fff', zIndex:1000, paddingBottom:'4px', borderBottom:'1px solid #eee'}}>
-          <div className="deck-builder-header" style={{ padding: '0.2rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+
+      {/* ★ 変更：画面全体をFlex Columnにして、高さ100%に固定 */}
+      <div className="deck-builder-screen" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        
+        {/* =========================================
+            ヘッダー領域（スクロールせず固定される部分）
+        ========================================= */}
+        <div style={{ flexShrink: 0, background: '#fff', borderBottom: '1px solid #eee', paddingBottom: '4px', zIndex: 10 }}>
+          <div style={{ padding: '0.2rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
               <button className="back-btn" onClick={() => setScreen('home')} style={{ padding: '0.1rem 0.4rem' }}>← ホーム</button>
               <h1 className="deck-builder-title" style={{ fontSize: '0.9rem', margin: 0 }}>デッキ作成</h1>
             </div>
 
-            {/* ★ 追加：右上にデッキ名入力欄と枚数カウンターを配置 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
                 <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 'bold' }}>デッキ名:</span>
@@ -138,8 +142,12 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           )}
         </div>
 
+        {/* =========================================
+            ボディ領域（独立してスクロールする部分）
+        ========================================= */}
         {selectedUnit && (
-            <div className="deck-builder-body">
+            // ★ 変更：flex: 1 と overflowY: 'auto' で、この中だけがスクロールするようにする
+            <div className="deck-builder-body" style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
               <div className="card-pool">
                 <h3 className="pool-title">カードプール</h3>
                 <div className="pool-list">
