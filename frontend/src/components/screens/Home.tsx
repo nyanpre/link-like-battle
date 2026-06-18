@@ -28,7 +28,7 @@ export const Home: React.FC<HomeProps> = ({
       </div>
 
       {/* 中央のコンテンツ（85%縮小で綺麗に収める） */}
-      <div style={{ transform: 'scale(0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', width: '100%' }}>
+      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', width: '100%' }}>
         
         <div className="title-logo" style={{ textAlign: 'center', marginBottom: '-0.5rem' }}>
           <span className="title-link">Link!</span><span className="title-like">Like!</span><span className="title-battle">Battle!</span>

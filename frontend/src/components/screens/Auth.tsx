@@ -44,7 +44,7 @@ export const Auth: React.FC = () => {
     <div style={{ width: '100%', height: '100%', backgroundColor: 'var(--bg-dark, #111827)', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       
       {/* ★ ここから中身を80%に縮小して中央に寄せるラッパー */}
-      <div style={{ transform: 'scale(0.8)', transformOrigin: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ transformOrigin: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         
         <h1 style={{ fontSize: '3rem', marginBottom: '2rem', fontFamily: 'Outfit', color: 'var(--primary, #60a5fa)', textShadow: '0 0 10px rgba(96, 165, 250, 0.5)', textAlign: 'center' }}>
           LINK LIKE BATTLE

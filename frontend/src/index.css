@@ -47,10 +47,10 @@ html, body {
   box-sizing: border-box; 
   
   /* 左右の最低余白を 12px → 7px に変更 */
-  padding-top: max(20px, env(safe-area-inset-top));
-  padding-bottom: max(7px, env(safe-area-inset-bottom));
-  padding-left: max(7px, env(safe-area-inset-left));
-  padding-right: max(7px, env(safe-area-inset-right));
+  padding-top: max(15px, env(safe-area-inset-top));
+  padding-bottom: max(5px, env(safe-area-inset-bottom));
+  padding-left: max(6px, env(safe-area-inset-left));
+  padding-right: max(6px, env(safe-area-inset-right));
 }
 
 /* 盤面中央のカード置き場 */
@@ -591,22 +591,23 @@ html, body {
     margin-bottom: 200px;
   }
 
-  .card {
-    width: 130px;
-    height: 182px;
-    padding: 0.5rem;
-    margin-left: -32px;
+.card {
+    width: 78px;       /* ★ 先ほどと同じ安全なスリムサイズに変更 */
+    height: 112px;
+    padding: 0.3rem;
+    margin-left: -32px; /* ★ 重なりを深くして肥大化を防ぐ */
   }
   
   .card:first-child {
     margin-left: 0;
   }
   
-  .hand-container {
+.hand-container {
     height: 200px;
     justify-content: center;
     padding-left: 10px;
     padding-right: 10px;
+    max-width: 450px;  /* ★ 小さいスマホでも450pxの制限を掛ける */
   }
 
   .card-cost {
@@ -884,10 +885,10 @@ html, body {
   box-sizing: border-box; 
   
   /* 左右の最低余白を 12px → 7px に変更 */
-  padding-top: max(20px, env(safe-area-inset-top));
-  padding-bottom: max(7px, env(safe-area-inset-bottom));
-  padding-left: max(7px, env(safe-area-inset-left));
-  padding-right: max(7px, env(safe-area-inset-right));
+  padding-top: max(15px, env(safe-area-inset-top));
+  padding-bottom: max(5px, env(safe-area-inset-bottom));
+  padding-left: max(6px, env(safe-area-inset-left));
+  padding-right: max(6px, env(safe-area-inset-right));
 }
 
 .deck-builder-header {
@@ -1383,18 +1384,19 @@ html, body {
     transform-origin: bottom left;
   }
 
-  .hand-container {
-    bottom: 5px;
-    height: 120px;
-    padding: 0 5px;
-  }
+.hand-container {
+  bottom: 5px;
+  height: 120px;
+  padding: 0 5px;
+  max-width: 450px; /* ★ スマホ横画面でも最大幅を念押しで固定 */
+}
 
-  .card {
-    width: 85px;
-    height: 120px;
-    padding: 0.3rem;
-    margin-left: -20px;
-  }
+.card {
+  width: 78px;       /* ★ 枠に収まるように少しスリムに */
+  height: 112px;
+  padding: 0.3rem;
+  margin-left: -32px; /* ★ カードの重なりを深くして、横幅の肥大化を防ぐ */
+}
 
   .card:hover {
     transform: translateY(-20px) scale(1.5) rotate(0deg) !important;
@@ -1571,16 +1573,17 @@ html, body {
 }
 
 /* 新規画面用スタイル */
-.home-screen, .lobby-screen, .waiting-screen {
+.home-screen, .lobby-screen, .waiting-screen, .auth-screen {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0; /* ★ height: 100vh から変更 */
+  top: 0; left: 0; right: 0; bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start; /* ★ centerだと上が見切れるため修正 */
   background: #fcfcfc;
-  padding: 2rem;
+  padding: max(30px, env(safe-area-inset-top)) 2rem 2rem 2rem; /* ★ ノッチ避けと余白 */
   box-sizing: border-box;
+  overflow-y: auto; /* ★ 画面が狭くて見切れたらスクロールできるようにする */
 }
 
 .name-input {
