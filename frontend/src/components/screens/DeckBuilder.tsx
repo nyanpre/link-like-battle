@@ -46,8 +46,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         <p>このゲームは横画面専用です</p>
       </div>
 
-      {/* ★ 変更：画面全体をFlex Columnにして、高さ100%に固定 */}
-      <div className="deck-builder-screen" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* ★ 変更：インラインスタイルを外し、すべてCSS（index.css）の設定に任せる */}
+      <div className="deck-builder-screen">
         
         {/* =========================================
             ヘッダー領域（スクロールせず固定される部分）

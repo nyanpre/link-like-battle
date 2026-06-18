@@ -19,8 +19,16 @@
 html, body {
   margin: 0;
   padding: 0;
-  width: 100dvw;  /* ★ Safariに効く最新の単位（Dynamic Viewport Width） */
-  height: 100dvh; /* ★ Safariに効く最新の単位（Dynamic Viewport Height） */
+  
+  /* ★ Safariの横ズレ（肥大化バグ）を完全に防ぐ最強の設定（四方固定） */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  
   overflow: hidden;
   background: #ffffff;
   color: var(--text-main);
@@ -39,7 +47,7 @@ html, body {
   align-items: center;
 }
 
-/* 全画面コンテナにセーフティゾーンを適用 */
+/* ★ バトル画面のコンテナ */
 .game-container {
   width: 100%;
   height: 100%;
@@ -50,12 +58,13 @@ html, body {
   box-sizing: border-box; 
   
   /* スマホのノッチ避け ＋ 最低12pxの余白を全方向に確保 */
-  padding-top: max(12px, env(safe-area-inset-top));
+  padding-top: max(30px, env(safe-area-inset-top));
   padding-bottom: max(12px, env(safe-area-inset-bottom));
   padding-left: max(12px, env(safe-area-inset-left));
   padding-right: max(12px, env(safe-area-inset-right));
 }
 
+/* 盤面中央のカード置き場 */
 .board-area {
   flex: 1;
   display: flex;
@@ -872,13 +881,21 @@ html, body {
 }
 
 /* Deck Builder Layout */
+/* ★ デッキ画面のコンテナ（バトル画面と全く同じ安全マージンを設定！） */
 .deck-builder-screen {
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  overflow: hidden;
   background: #fcfcfc;
-  overflow-y: auto; 
-  padding-top: 3rem !important; /* 空白を圧縮 */
+  box-sizing: border-box; 
+  
+  /* スマホのノッチ避け ＋ 最低12pxの余白を全方向に確保 */
+  padding-top: max(30px, env(safe-area-inset-top));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
 }
 
 .deck-builder-header {
