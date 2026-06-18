@@ -1726,3 +1726,26 @@ html, body {
 .card-preview-overlay {
   z-index: 2500 !important;
 }
+
+/* 使用カードスタック（SetlistBoard）専用の定義 */
+.setlist-container-class {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 130px;
+  height: 182px;
+  cursor: pointer;
+  z-index: 100;
+}
+
+.modal-grid .card {
+  position: relative !important;
+  margin: 0 !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
