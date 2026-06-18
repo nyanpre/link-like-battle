@@ -46,11 +46,10 @@ html, body {
   background: #fcfcfc;
   box-sizing: border-box; 
   
-  /* 左右の最低余白を 12px → 7px に変更 */
-  padding-top: max(15px, env(safe-area-inset-top));
-  padding-bottom: max(5px, env(safe-area-inset-bottom));
-  padding-left: max(6px, env(safe-area-inset-left));
-  padding-right: max(6px, env(safe-area-inset-right));
+  padding-top: max(5px, env(safe-area-inset-top));
+  padding-bottom: max(3px, env(safe-area-inset-bottom));
+  padding-left: max(5px, env(safe-area-inset-left));
+  padding-right: max(5px, env(safe-area-inset-right));
 }
 
 /* 盤面中央のカード置き場 */
@@ -885,10 +884,10 @@ html, body {
   box-sizing: border-box; 
   
   /* 左右の最低余白を 12px → 7px に変更 */
-  padding-top: max(15px, env(safe-area-inset-top));
-  padding-bottom: max(5px, env(safe-area-inset-bottom));
-  padding-left: max(6px, env(safe-area-inset-left));
-  padding-right: max(6px, env(safe-area-inset-right));
+  padding-top: max(5px, env(safe-area-inset-top));
+  padding-bottom: max(3px, env(safe-area-inset-bottom));
+  padding-left: max(5px, env(safe-area-inset-left));
+  padding-right: max(5px, env(safe-area-inset-right));
 }
 
 .deck-builder-header {
