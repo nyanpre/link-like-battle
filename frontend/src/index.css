@@ -19,38 +19,27 @@
 html, body {
   margin: 0;
   padding: 0;
-  
-  /* ★ Safariの横ズレ（肥大化バグ）を完全に防ぐ最強の設定（四方固定） */
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  
+  top: 0; left: 0; right: 0; bottom: 0; /* ★ widthを使わず四方を固定 */
   overflow: hidden;
   background: #ffffff;
   color: var(--text-main);
   font-family: 'Inter', sans-serif;
   user-select: none;
   -webkit-user-select: none;
-  overscroll-behavior: none; /* ★ Safariのスワイプによるバウンドを防止 */
+  overscroll-behavior: none;
 }
 
 #root, .app-wrapper {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
   overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 /* ★ バトル画面のコンテナ */
 .game-container {
-  width: 100%;
-  height: 100%;
+  position: absolute; /* ★ width: 100% ではなく絶対配置で幅を強制固定 */
+  top: 0; left: 0; right: 0; bottom: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -58,7 +47,7 @@ html, body {
   box-sizing: border-box; 
   
   /* スマホのノッチ避け ＋ 最低12pxの余白を全方向に確保 */
-  padding-top: max(30px, env(safe-area-inset-top));
+  padding-top: max(25px, env(safe-area-inset-top));
   padding-bottom: max(12px, env(safe-area-inset-bottom));
   padding-left: max(12px, env(safe-area-inset-left));
   padding-right: max(12px, env(safe-area-inset-right));
@@ -91,15 +80,16 @@ html, body {
 .enemy-status {
   position: absolute;
   top: 4rem;
-  /* 絶対配置にもセーフティゾーンを加算 */
-  left: calc(0.5rem + var(--safe-left)) !important;
+  /* ★ 修正：var(--safe-left) を削除してシンプルに */
+  left: 0.5rem !important; 
   transform: scale(1);
 }
 
 .self-status {
   position: absolute;
   bottom: 4rem;
-  left: calc(0.5rem + var(--safe-left)) !important;
+  /* ★ 修正：var(--safe-left) を削除してシンプルに */
+  left: 0.5rem !important; 
 }
 
 .hp-bar-container {
@@ -145,7 +135,8 @@ html, body {
 
 .voltage-sidebar {
   position: absolute;
-  right: calc(1.5rem + var(--safe-right)) !important;
+  /* ★ 修正：var(--safe-right) を削除してシンプルに */
+  right: 1.5rem !important; 
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -331,7 +322,8 @@ html, body {
 
 .action-container {
   position: absolute;
-  right: calc(1.5rem + var(--safe-right)) !important;
+  /* ★ 修正：var(--safe-right) を削除してシンプルに */
+  right: 1.5rem !important; 
   bottom: 2rem;
   display: flex;
   flex-direction: row;
