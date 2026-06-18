@@ -1,25 +1,49 @@
 // src/components/ui/SetlistBoard.tsx
 import React from 'react';
-import { MiniCard } from './Card';
-import { GameState } from '../../types'; // ★追加
+import { GameState } from '../../types';
+import { StandardCard } from './Card'; // ★ getCardBackground等は削除し、StandardCardのみ使用
 
 interface SetlistBoardProps {
-  gameState: GameState; // ★ any を変更
+  gameState: GameState;
+  setSelectedCard?: (card: any) => void;
 }
 
-export const SetlistBoard: React.FC<SetlistBoardProps> = ({ gameState }) => {
-  if (gameState.enemyPlayedCard) return null;
+export const SetlistBoard: React.FC<SetlistBoardProps> = ({ gameState, setSelectedCard }) => {
+  const { setlist } = gameState;
 
   return (
     <div className="setlist-container">
-      {gameState.setlist.slice(-5).map((log, index: number, arr: any[]) => (
-        <div key={index} className={`setlist-card ${index === arr.length - 1 ? 'latest' : ''}`} style={{
-          transform: `translate(${(index - arr.length + 1) * 30}px, 0) scale(${index === arr.length - 1 ? 1.2 : 0.8 + (index * 0.05)})`,
-          zIndex: index
-        }}>
-          <MiniCard card={log.card} owner={log.owner} />
-        </div>
-      ))}
+      {setlist.map((card: any, idx: number) => {
+        const isLatest = idx === setlist.length - 1;
+        const offset = (setlist.length - 1 - idx) * 10;
+        
+        return (
+          <div 
+            key={idx}
+            className={`setlist-card ${isLatest ? 'latest' : ''}`}
+            style={{
+              transform: `translate(${offset}px, ${-offset}px) ${isLatest ? 'scale(1.2)' : 'scale(0.8)'}`,
+              zIndex: idx,
+              cursor: isLatest && setSelectedCard ? 'pointer' : 'default'
+            }}
+            onClick={() => {
+              if (isLatest && setSelectedCard) {
+                // ★ セットリストからは「プレビュー専用」として渡す
+                setSelectedCard({ ...card, _isPreviewOnly: true });
+              }
+            }}
+          >
+            {isLatest ? (
+              // ★ 中身を手札と完全に同じコンポーネントにする
+              <div style={{ pointerEvents: 'none' }}>
+                <StandardCard card={card} />
+              </div>
+            ) : (
+              <StandardCard card={card} />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };

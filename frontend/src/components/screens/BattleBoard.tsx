@@ -21,7 +21,6 @@ interface BattleBoardProps {
   selectedCard: CardData | null;
   setSelectedCard: (card: CardData | null) => void;
   
-  // Logic Hookから受け取る関数とステート
   damageTexts: any[];
   showDiscard: { show: boolean, owner: 'player' | 'enemy' | null };
   setShowDiscard: any;
@@ -51,37 +50,21 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
       </div>
 
       <div className="game-container">
-        {/* 絶対にpaddingをはみ出さない、安全な内側の箱 */}
         <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
           
           {!gameState.battleResult && (
             <button
               onClick={handleSurrender}
               style={{
-                position: 'absolute',
-                top: '0px',   
-                right: '0px', 
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '6px 14px',
-                backgroundColor: 'rgba(220, 38, 38, 0.85)',
-                color: 'white',
-                fontSize: '0.85rem',
-                fontWeight: 'bold',
-                borderRadius: '9999px',
-                border: 'none',
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)',
-                cursor: 'pointer',
-                zIndex: 50,
-                backdropFilter: 'blur(4px)',
-                transition: 'all 0.2s ease-in-out'
+                position: 'absolute', top: '0px', right: '0px', display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '6px 14px', backgroundColor: 'rgba(220, 38, 38, 0.85)', color: 'white', fontSize: '0.85rem',
+                fontWeight: 'bold', borderRadius: '9999px', border: 'none', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)',
+                cursor: 'pointer', zIndex: 50, backdropFilter: 'blur(4px)', transition: 'all 0.2s ease-in-out'
               }}
               onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 1)'}
               onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.85)'}
             >
-              <Flag size={14} />
-              <span>降参</span>
+              <Flag size={14} /><span>降参</span>
             </button>
           )}
 
@@ -113,30 +96,22 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
 
           <VoltageSidebar player={gameState.player} enemy={gameState.enemy} />
 
-          {/* 中身はflex:1で均等に真ん中に配置される */}
           <div className="board-area">
             <PlayerStatus 
-              data={gameState.enemy} 
-              isEnemy={true} 
-              isShaking={gameState.animations?.enemyShake} 
+              data={gameState.enemy} isEnemy={true} isShaking={gameState.animations?.enemyShake} 
               onDiscardClick={(owner) => setShowDiscard({ show: true, owner: owner as 'player' | 'enemy' })} 
             />
 
-          <SetlistBoard gameState={gameState} />
+            {/* ★修正：プレビュー表示のために setSelectedCard を渡す */}
+            <SetlistBoard gameState={gameState} setSelectedCard={setSelectedCard} />
 
             <PlayerStatus 
-              data={gameState.player} 
-              isEnemy={false} 
-              isShaking={gameState.animations?.playerShake} 
+              data={gameState.player} isEnemy={false} isShaking={gameState.animations?.playerShake} 
               onDiscardClick={(owner) => setShowDiscard({ show: true, owner: owner as 'player' | 'enemy' })} 
             />
           </div>
 
-          <ActionControls 
-            gameState={gameState} 
-            handleSpSkill={handleSpSkill} 
-            endTurnPlayer={endTurnPlayer} 
-          />
+          <ActionControls gameState={gameState} handleSpSkill={handleSpSkill} endTurnPlayer={endTurnPlayer} />
 
           <PlayerHand gameState={gameState} setSelectedCard={setSelectedCard} />
 
@@ -159,9 +134,10 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
           )}
 
           <CardPreviewModal selectedCard={selectedCard} gameState={gameState} playCard={playCard} setSelectedCard={setSelectedCard} />
-          <DiscardModal showDiscard={showDiscard} setShowDiscard={setShowDiscard} gameState={gameState} />
+          
+          {/* ★修正：プレビュー表示のために setSelectedCard を渡す */}
+          <DiscardModal showDiscard={showDiscard} setShowDiscard={setShowDiscard} gameState={gameState} setSelectedCard={setSelectedCard} />
           <BattleResultOverlay gameState={gameState} gameMode={gameMode} isHost={isHost} roomId={roomId} handleRematch={handleRematch} setScreen={setScreen} />
-        
         </div>
       </div>
     </>

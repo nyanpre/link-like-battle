@@ -16,7 +16,10 @@ export const CardPreviewModal: React.FC<CardPreviewModalProps> = ({ selectedCard
   if (!selectedCard) return null;
 
   const calcCost = getCalculatedCost(selectedCard, gameState.player);
-  const canPlay = gameState.isPlayerTurn && gameState.player.currentVoltage >= (calcCost as number) && !gameState.turnBanner && !gameState.isCoinFlipPhase && !gameState.isAnimating;
+  
+  // ★ 修正: !(selectedCard as any)._isPreviewOnly を追加。
+  // プレビュー専用フラグがない（＝手札からのクリック）時のみ canPlay が true になります。
+  const canPlay = !(selectedCard as any)._isPreviewOnly && gameState.isPlayerTurn && gameState.player.currentVoltage >= (calcCost as number) && !gameState.turnBanner && !gameState.isCoinFlipPhase && !gameState.isAnimating;
 
   return (
     <div className="card-preview-overlay" onClick={() => setSelectedCard(null)}>

@@ -3,37 +3,22 @@ import React from 'react';
 import { Shield, Zap, HeartPulse, Swords } from 'lucide-react';
 import { getCalculatedCost } from '../../utils/battleEngine';
 import { getCardBackground } from './Card';
-import { GameState, CardData } from '../../types'; // ★追加
+import { GameState, CardData } from '../../types';
 
 interface PlayerHandProps {
-  gameState: GameState; // ★ any を変更
-  setSelectedCard: (card: CardData | null) => void; // ★ any を変更
+  gameState: GameState;
+  setSelectedCard: (card: CardData | null) => void;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({ gameState, setSelectedCard }) => {
   const { player, isPlayerTurn, turnBanner, isCoinFlipPhase, isAnimating } = gameState;
 
   return (
-    <div className="hand-container" style={{ maxWidth: `${Math.max(200, window.innerWidth - (window.innerHeight <= 480 ? 160 : 220))}px` }}>
-      {/* ★引数の型を CardData に変更 */}
-      {player.hand.map((card: CardData, idx: number, arr: CardData[]) => {
+    <div className="hand-container">
+      {/* ★ 修正：CardData型への厳密化をやめ、元の any に戻してエラーを解消します */}
+      {player.hand.map((card: any, idx: number) => {
         const calcCost = getCalculatedCost(card, player);
         const canPlay = isPlayerTurn && player.currentVoltage >= (calcCost as number) && !turnBanner && !isCoinFlipPhase && !isAnimating;
-        
-        const isMobile = window.innerHeight <= 480;
-        const cardWidth = isMobile ? 85 : 130;
-        const actualMaxWidth = Math.max(200, window.innerWidth - (isMobile ? 160 : 220));
-        const minVisible = cardWidth * 0.35;
-        let marginLeft;
-        if (idx === 0) {
-          marginLeft = 0;
-        } else if (arr.length > 1) {
-          const availableWidth = actualMaxWidth - cardWidth;
-          const neededMargin = availableWidth / (arr.length - 1);
-          const idealMargin = Math.min(neededMargin, cardWidth * 0.7);
-          const clampedMargin = Math.max(idealMargin, minVisible);
-          marginLeft = `${-(cardWidth - clampedMargin)}px`;
-        }
 
         return (
           <div 
@@ -43,8 +28,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ gameState, setSelectedCa
                   background: getCardBackground(card.歌唱),
                   opacity: canPlay ? 1 : 0.4,
                   cursor: 'pointer',
-                  filter: canPlay ? 'none' : 'grayscale(30%)',
-                  marginLeft: marginLeft
+                  filter: canPlay ? 'none' : 'grayscale(30%)'
               }}
               onClick={() => setSelectedCard(card)}
           >
