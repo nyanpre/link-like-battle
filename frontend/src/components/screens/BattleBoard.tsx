@@ -51,112 +51,119 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
       </div>
 
       <div className="game-container">
-        {!gameState.battleResult && (
-          <button
-            onClick={handleSurrender}
-            style={{
-              position: 'absolute',
-              top: '12px',
-              right: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '6px 14px',
-              backgroundColor: 'rgba(220, 38, 38, 0.85)',
-              color: 'white',
-              fontSize: '0.85rem',
-              fontWeight: 'bold',
-              borderRadius: '9999px',
-              border: 'none',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)',
-              cursor: 'pointer',
-              zIndex: 50,
-              backdropFilter: 'blur(4px)',
-              transition: 'all 0.2s ease-in-out'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 1)'}
-            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.85)'}
-          >
-            <Flag size={14} />
-            <span>降参</span>
-          </button>
-        )}
+        {/* ★ 追加：ここが絶対にpaddingをはみ出さない「安全な内側の箱」 */}
+        <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          
+          {!gameState.battleResult && (
+            <button
+              onClick={handleSurrender}
+              style={{
+                position: 'absolute',
+                top: '0px',   // ★ 親で余白を取っているので 0 でOK！
+                right: '0px', // ★ 親で余白を取っているので 0 でOK！
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '6px 14px',
+                backgroundColor: 'rgba(220, 38, 38, 0.85)',
+                color: 'white',
+                fontSize: '0.85rem',
+                fontWeight: 'bold',
+                borderRadius: '9999px',
+                border: 'none',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)',
+                cursor: 'pointer',
+                zIndex: 50,
+                backdropFilter: 'blur(4px)',
+                transition: 'all 0.2s ease-in-out'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 1)'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.85)'}
+            >
+              <Flag size={14} />
+              <span>降参</span>
+            </button>
+          )}
 
-        {gameState.turnBanner && <div className="turn-banner">{gameState.turnBanner}</div>}
-        
-        {gameState.enemyPlayedCard && !gameState.turnBanner && (
-          <div className="enemy-played-popup">
-              <StandardCard card={gameState.enemyPlayedCard} />
-          </div>
-        )}
+          {gameState.turnBanner && <div className="turn-banner">{gameState.turnBanner}</div>}
+          
+          {gameState.enemyPlayedCard && !gameState.turnBanner && (
+            <div className="enemy-played-popup">
+                <StandardCard card={gameState.enemyPlayedCard} />
+            </div>
+          )}
 
-        {overdrawnCards.map(od => (
-          <div key={od.id} className={`overdraw-container ${od.isPlayer ? 'player' : 'enemy'}`}>
-            <StandardCard card={od.card} />
-          </div>
-        ))}
-
-        {damageTexts.map(dt => (
-          <div key={dt.id} className={dt.cssClass || 'damage-text'} style={{ left: `${dt.x}px`, top: `${dt.y}px`, color: dt.color }}>
-            {dt.text}
-          </div>
-        ))}
-
-        <div className="enemy-hand-container" style={{ top: '-40px' }}>
-          {gameState.enemy.hand.map((_: any, i: number) => (
-            <div key={i} className="enemy-card-back"></div>
+          {overdrawnCards.map(od => (
+            <div key={od.id} className={`overdraw-container ${od.isPlayer ? 'player' : 'enemy'}`}>
+              <StandardCard card={od.card} />
+            </div>
           ))}
-        </div>
 
-        <VoltageSidebar player={gameState.player} enemy={gameState.enemy} />
+          {damageTexts.map(dt => (
+            <div key={dt.id} className={dt.cssClass || 'damage-text'} style={{ left: `${dt.x}px`, top: `${dt.y}px`, color: dt.color }}>
+              {dt.text}
+            </div>
+          ))}
 
-        <div className="board-area">
-          <PlayerStatus 
-            data={gameState.enemy} 
-            isEnemy={true} 
-            isShaking={gameState.animations?.enemyShake} 
-            onDiscardClick={(owner) => setShowDiscard({ show: true, owner: owner as 'player' | 'enemy' })} 
+          <div className="enemy-hand-container" style={{ top: '-40px' }}>
+            {gameState.enemy.hand.map((_: any, i: number) => (
+              <div key={i} className="enemy-card-back"></div>
+            ))}
+          </div>
+
+          <VoltageSidebar player={gameState.player} enemy={gameState.enemy} />
+
+          {/* 中身はflex:1で均等に真ん中に配置される */}
+          <div className="board-area">
+            <PlayerStatus 
+              data={gameState.enemy} 
+              isEnemy={true} 
+              isShaking={gameState.animations?.enemyShake} 
+              onDiscardClick={(owner) => setShowDiscard({ show: true, owner: owner as 'player' | 'enemy' })} 
+            />
+
+            <SetlistBoard gameState={gameState} />
+
+            <PlayerStatus 
+              data={gameState.player} 
+              isEnemy={false} 
+              isShaking={gameState.animations?.playerShake} 
+              onDiscardClick={(owner) => setShowDiscard({ show: true, owner: owner as 'player' | 'enemy' })} 
+            />
+          </div>
+
+          <ActionControls 
+            gameState={gameState} 
+            handleSpSkill={handleSpSkill} 
+            endTurnPlayer={endTurnPlayer} 
           />
 
-          <SetlistBoard gameState={gameState} />
+          <PlayerHand gameState={gameState} setSelectedCard={setSelectedCard} />
 
-          <PlayerStatus 
-            data={gameState.player} 
-            isEnemy={false} 
-            isShaking={gameState.animations?.playerShake} 
-            onDiscardClick={(owner) => setShowDiscard({ show: true, owner: owner as 'player' | 'enemy' })} 
-          />
-        </div>
-
-        <ActionControls 
-          gameState={gameState} 
-          handleSpSkill={handleSpSkill} 
-          endTurnPlayer={endTurnPlayer} 
-        />
-
-        <PlayerHand gameState={gameState} setSelectedCard={setSelectedCard} />
-
-        {selectFromDiscard && (
-          <div className="modal-overlay" style={{ zIndex: 3000 }}>
-            <div className="modal-content discard-modal">
-              <h2 className="discard-title">コスト{selectFromDiscard.maxCost}以下のカードを選んで使用</h2>
-              <button className="close-btn" onClick={() => setSelectFromDiscard(null)}>×</button>
-              <div className="discard-grid">
-                {gameState.player.discard
-                  .filter((c: any) => (Number(c.コスト) || 0) <= selectFromDiscard.maxCost && c.id !== selectFromDiscard.excludeId)
-                  .map((card: any, idx: number) => (
-                    <div key={idx} onClick={() => playCardFromDiscard(card)}>
-                      <StandardCard card={card} />
-                    </div>
-                ))}
+          {selectFromDiscard && (
+            <div className="modal-overlay" style={{ zIndex: 3000 }}>
+              <div className="modal-content discard-modal">
+                <h2 className="discard-title">コスト{selectFromDiscard.maxCost}以下のカードを選んで使用</h2>
+                <button className="close-btn" onClick={() => setSelectFromDiscard(null)}>×</button>
+                <div className="discard-grid">
+                  {gameState.player.discard
+                    .filter((c: any) => (Number(c.コスト) || 0) <= selectFromDiscard.maxCost && c.id !== selectFromDiscard.excludeId)
+                    .map((card: any, idx: number) => (
+                      <div key={idx} onClick={() => playCardFromDiscard(card)}>
+                        <StandardCard card={card} />
+                      </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <CardPreviewModal selectedCard={selectedCard} gameState={gameState} playCard={playCard} setSelectedCard={setSelectedCard} />
-        <DiscardModal showDiscard={showDiscard} setShowDiscard={setShowDiscard} gameState={gameState} />
-        <BattleResultOverlay gameState={gameState} gameMode={gameMode} isHost={isHost} roomId={roomId} handleRematch={handleRematch} setScreen={setScreen} />
+          <CardPreviewModal selectedCard={selectedCard} gameState={gameState} playCard={playCard} setSelectedCard={setSelectedCard} />
+          <DiscardModal showDiscard={showDiscard} setShowDiscard={setShowDiscard} gameState={gameState} />
+          <BattleResultOverlay gameState={gameState} gameMode={gameMode} isHost={isHost} roomId={roomId} handleRematch={handleRematch} setScreen={setScreen} />
+        
+        </div>
+        {/* ★ 内側の箱ここまで */}
       </div>
     </>
   );

@@ -42,18 +42,22 @@ html, body {
 }
 
 /* 全画面コンテナにセーフティゾーンを適用 */
-.game-container, .deck-builder-screen, .home-screen, .lobby-screen, .waiting-screen {
-  padding-left: var(--safe-left) !important;
-  padding-right: var(--safe-right) !important;
-  box-sizing: border-box;
-  width: 100vw;
-}
-
 .game-container {
+  width: 100vw;
+  height: 100svh;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  position: relative;
+  overflow: hidden;
+  background: #fcfcfc;
+  
+  /* ★ 追加：これがないとpaddingの分だけ画面が外に膨らんで見切れます */
+  box-sizing: border-box; 
+  
+  /* スマホのノッチ避け ＋ 最低12pxの余白を全方向に確保 */
+  padding-top: max(36px, env(safe-area-inset-top));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
 }
 
 .board-area {
@@ -62,9 +66,8 @@ html, body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 1rem;
   position: relative;
-  overflow: hidden;
+  width: 100%;
 }
 
 .player-status {
@@ -207,7 +210,7 @@ html, body {
 }
 
 .card:hover {
-  transform: translateY(-40px) scale(1.2) rotate(0deg) !important;
+  transform: translateY(-20px) scale(1.2) rotate(0deg) !important;
   z-index: 500;
   box-shadow: 0 20px 40px rgba(0, 180, 212, 0.3);
   border-color: var(--accent);
@@ -879,7 +882,7 @@ html, body {
   height: 100vh;
   background: #fcfcfc;
   overflow-y: auto; 
-  padding-top: 5rem !important; /* 空白を圧縮 */
+  padding-top: 3rem !important; /* 空白を圧縮 */
 }
 
 .deck-builder-header {
