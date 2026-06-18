@@ -51,7 +51,7 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
       </div>
 
       <div className="game-container">
-        {/* ★ 追加：ここが絶対にpaddingをはみ出さない「安全な内側の箱」 */}
+        {/* 絶対にpaddingをはみ出さない、安全な内側の箱 */}
         <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
           
           {!gameState.battleResult && (
@@ -59,8 +59,8 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
               onClick={handleSurrender}
               style={{
                 position: 'absolute',
-                top: '0px',   // ★ 親で余白を取っているので 0 でOK！
-                right: '0px', // ★ 親で余白を取っているので 0 でOK！
+                top: '0px',   
+                right: '0px', 
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
@@ -122,7 +122,7 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
               onDiscardClick={(owner) => setShowDiscard({ show: true, owner: owner as 'player' | 'enemy' })} 
             />
 
-            <SetlistBoard gameState={gameState} />
+          <SetlistBoard gameState={gameState} />
 
             <PlayerStatus 
               data={gameState.player} 
@@ -163,7 +163,6 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
           <BattleResultOverlay gameState={gameState} gameMode={gameMode} isHost={isHost} roomId={roomId} handleRematch={handleRematch} setScreen={setScreen} />
         
         </div>
-        {/* ★ 内側の箱ここまで */}
       </div>
     </>
   );
