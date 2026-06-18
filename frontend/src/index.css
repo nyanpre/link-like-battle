@@ -38,7 +38,7 @@ html, body {
 
 /* ★ バトル画面のコンテナ */
 .game-container {
-  position: absolute; /* ★ width: 100% ではなく絶対配置で幅を強制固定 */
+  position: absolute; 
   top: 0; left: 0; right: 0; bottom: 0;
   display: flex;
   flex-direction: column;
@@ -46,11 +46,11 @@ html, body {
   background: #fcfcfc;
   box-sizing: border-box; 
   
-  /* スマホのノッチ避け ＋ 最低12pxの余白を全方向に確保 */
-  padding-top: max(25px, env(safe-area-inset-top));
-  padding-bottom: max(12px, env(safe-area-inset-bottom));
-  padding-left: max(12px, env(safe-area-inset-left));
-  padding-right: max(12px, env(safe-area-inset-right));
+  /* 左右の最低余白を 12px → 7px に変更 */
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-bottom: max(7px, env(safe-area-inset-bottom));
+  padding-left: max(7px, env(safe-area-inset-left));
+  padding-right: max(7px, env(safe-area-inset-right));
 }
 
 /* 盤面中央のカード置き場 */
@@ -162,14 +162,13 @@ html, body {
   white-space: nowrap; /* 強制改行を防止 */
 }
 
-/* Card Styling */
 .hand-container {
   position: absolute;
   bottom: 1rem;
-  left: 49%;
+  left: 50%;
   transform: translateX(-50%);
-  width: auto;
-  max-width: 60vw;
+  width: 100%;
+  max-width: 450px; /* ★ 60vw から 450px に変更 */
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -874,20 +873,21 @@ html, body {
 
 /* Deck Builder Layout */
 /* ★ デッキ画面のコンテナ（バトル画面と全く同じ安全マージンを設定！） */
+/* ★ デッキ画面のコンテナ */
 .deck-builder-screen {
-  width: 100%;
-  height: 100%;
+  position: absolute; 
+  top: 0; left: 0; right: 0; bottom: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   background: #fcfcfc;
   box-sizing: border-box; 
   
-  /* スマホのノッチ避け ＋ 最低12pxの余白を全方向に確保 */
-  padding-top: max(30px, env(safe-area-inset-top));
-  padding-bottom: max(12px, env(safe-area-inset-bottom));
-  padding-left: max(12px, env(safe-area-inset-left));
-  padding-right: max(12px, env(safe-area-inset-right));
+  /* 左右の最低余白を 12px → 7px に変更 */
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-bottom: max(7px, env(safe-area-inset-bottom));
+  padding-left: max(7px, env(safe-area-inset-left));
+  padding-right: max(7px, env(safe-area-inset-right));
 }
 
 .deck-builder-header {
@@ -1572,13 +1572,15 @@ html, body {
 
 /* 新規画面用スタイル */
 .home-screen, .lobby-screen, .waiting-screen {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0; /* ★ height: 100vh から変更 */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
   background: #fcfcfc;
   padding: 2rem;
+  box-sizing: border-box;
 }
 
 .name-input {
