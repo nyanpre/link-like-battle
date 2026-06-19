@@ -49,7 +49,7 @@ export const VoltageSidebar: React.FC<VoltageSidebarProps> = ({ player, enemy })
       {/* 敵のボルテージ */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', width: '100%' }}>
         {/* ★ 絶対改行させない(nowrap) ＋ フォントサイズと文字間隔を圧縮 */}
-        <span style={{ margin: 0, color: '#000000', fontSize: '0.75rem', fontWeight: 'bold', whiteSpace: 'nowrap', letterSpacing: '-0.5px' }}>
+        <span style={{ margin: 0, color: '#000000', fontSize: '0.7rem', fontWeight: 'bold', whiteSpace: 'nowrap', letterSpacing: '-0.5px' }}>
           Enemy Voltage
         </span>
         <div style={{ display: 'flex', alignItems: 'center', margin: 0 }}>
@@ -62,11 +62,11 @@ export const VoltageSidebar: React.FC<VoltageSidebarProps> = ({ player, enemy })
 
       {/* 自分のボルテージ */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', width: '100%' }}>
-        <span style={{ margin: 0, color: '#000000', fontSize: '0.70rem', fontWeight: 'bold', whiteSpace: 'nowrap', letterSpacing: '-0.5px' }}>
+        <span style={{ margin: 0, color: '#000000', fontSize: '0.75rem', fontWeight: 'bold', whiteSpace: 'nowrap', letterSpacing: '-0.5px' }}>
           Your Voltage
         </span>
         <div style={{ display: 'flex', alignItems: 'center', margin: 0 }}>
-          <span style={{fontSize:'0.75rem', marginRight:'4px', color:'#000000', fontWeight:'bold', whiteSpace: 'nowrap'}}>
+          <span style={{fontSize:'0.7rem', marginRight:'4px', color:'#000000', fontWeight:'bold', whiteSpace: 'nowrap'}}>
             {player.currentVoltage}/{player.maxVoltage}
           </span>
           {drawVoltage(player.maxVoltage, player.currentVoltage, '#a78bfa')}

@@ -122,7 +122,7 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
             width: '13vw',          // ★ 全体の幅も少し絞る
             minWidth: '100px',       // ★ より細くなることを許可
             maxWidth: '120px',      
-            gap: '2.0vh', 
+            gap: '3.0vh', 
             zIndex: 100,
             pointerEvents: 'none'
           }}>
@@ -136,7 +136,7 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
               display: 'flex', 
               flexDirection: 'column', 
               alignItems: 'center',
-              gap: '1.5vh',         
+              gap: '2.0vh',         
               pointerEvents: 'none',
               width: '100%' 
             }}>
