@@ -1,4 +1,3 @@
-// src/components/screens/Home.tsx
 import React from 'react';
 import { logoutFromGame } from '../../utils/firebase';
 import { User } from 'lucide-react';
@@ -19,22 +18,25 @@ export const Home: React.FC<HomeProps> = ({
   user
 }) => {
   return (
-    <div className="home-screen">
+    <div className="home-screen" style={{ justifyContent: 'center', padding: 0, overflow: 'hidden' }}>
       
-      {/* 画面左上のユーザー情報（ノッチを避けるために絶対配置） */}
-      <div style={{ position: 'absolute', top: 'max(12px, env(safe-area-inset-top))', left: 'max(12px, env(safe-area-inset-left))', color: '#9ca3af', fontSize: '0.875rem', background: 'rgba(0,0,0,0.5)', padding: '6px 12px', borderRadius: '20px', border: '1px solid #374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+      {/* 画面左上のユーザー情報 */}
+      <div style={{ position: 'absolute', top: 'max(2vh, env(safe-area-inset-top))', left: 'max(2vw, env(safe-area-inset-left))', color: '#9ca3af', fontSize: 'min(0.875rem, 3.5vh)', background: 'rgba(0,0,0,0.5)', padding: 'min(6px, 1.5vh) min(12px, 2vw)', borderRadius: '20px', border: '1px solid #374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
         <User size={14} /> 
         {user?.isAnonymous ? 'ゲストとしてプレイ中' : user?.email}
       </div>
 
-      {/* 中央のコンテンツ（85%縮小で綺麗に収める） */}
-      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', width: '100%' }}>
+      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'min(1.5rem, 3vh)', width: '100%' }}>
         
-        <div className="title-logo" style={{ textAlign: 'center', marginBottom: '-0.5rem' }}>
-          <span className="title-link">Link!</span><span className="title-like">Like!</span><span className="title-battle">Battle!</span>
+        <div className="title-logo" style={{ textAlign: 'center', marginBottom: 0, lineHeight: '1.1' }}>
+          <div>
+            <span className="title-link" style={{ fontSize: 'min(4rem, 14vh)' }}>Link!</span>
+            <span className="title-like" style={{ fontSize: 'min(4rem, 14vh)' }}>Like!</span>
+          </div>
+          <div className="title-battle" style={{ fontSize: 'min(5rem, 18vh)' }}>Battle!</div>
         </div>
         
-        <p className="title-subtitle" style={{ margin: 0 }}>究極のスクールアイドルバトル</p>
+        <p className="title-subtitle" style={{ margin: 0, fontSize: 'min(1.2rem, 4.5vh)' }}>究極のスクールアイドルバトル</p>
         
         <input 
           className="name-input" 
@@ -42,19 +44,18 @@ export const Home: React.FC<HomeProps> = ({
           value={playerName} 
           onChange={e => setPlayerName(e.target.value)} 
           placeholder="プレイヤー名 (最大6文字)" 
-          style={{ margin: '0' }}
+          style={{ margin: 0, padding: 'min(15px, 2.5vh)', fontSize: 'min(1.5rem, 5vh)', width: 'min(250px, 40vw)', height: 'min(60px, 9vh)', boxSizing: 'border-box' }}
         />
         
-        <div className="mode-buttons" style={{ display: 'flex', gap: '1rem' }}>
-          <button className="title-start-btn" onClick={() => { setGameMode('cpu'); setScreen('deckBuilder'); }}>
+        <div className="mode-buttons" style={{ display: 'flex', gap: 'min(1rem, 3vw)' }}>
+          <button className="title-start-btn" onClick={() => { setGameMode('cpu'); setScreen('deckBuilder'); }} style={{ padding: 'min(1rem, 3vh) min(2.5rem, 5vw)', fontSize: 'min(1.5rem, 5.5vh)' }}>
             CPU戦で遊ぶ
           </button>
-          <button className="title-start-btn" style={{ background: 'var(--secondary)' }} onClick={() => { setGameMode('online'); setScreen('deckBuilder'); }}>
+          <button className="title-start-btn" style={{ background: 'var(--secondary)', padding: 'min(1rem, 3vh) min(2.5rem, 5vw)', fontSize: 'min(1.5rem, 5.5vh)' }} onClick={() => { setGameMode('online'); setScreen('deckBuilder'); }}>
             通信対戦で遊ぶ
           </button>
         </div>
 
-        {/* 移動させたログイン/切替ボタン */}
         <button
           onClick={async () => {
             if (window.confirm('ログイン画面に戻りますか？\n（※ゲストで作成したデータから離れます）')) {
@@ -62,14 +63,14 @@ export const Home: React.FC<HomeProps> = ({
             }
           }}
           style={{
-            marginTop: '0.5rem',
-            padding: '8px 24px', 
+            marginTop: 'min(0.5rem, 1vh)',
+            padding: 'min(8px, 1.5vh) min(24px, 4vw)', 
             backgroundColor: 'transparent',
             color: '#9ca3af', 
             border: '1px solid #4b5563', 
             borderRadius: '50px', 
             cursor: 'pointer', 
-            fontSize: '0.9rem',
+            fontSize: 'min(0.9rem, 3.5vh)',
             fontWeight: 'bold',
             transition: 'all 0.2s'
           }}

@@ -34,7 +34,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ gameState, setSelectedCa
         @media (max-width: 768px), (max-height: 480px) {
           .hand-container .card {
             /* スマホ版: 幅78px。基本-32pxで、枚数が多い場合は自動で圧縮して枠内に収める */
-            margin-left: calc(min(-32px, (100% - 120px - (var(--hand-count) * 78px)) / max(1, var(--hand-count) - 1))) !important;
+            margin-left: calc(min(-36px, (100% - 140px - (var(--hand-count) * 78px)) / max(1, var(--hand-count) - 1))) !important;
           }
         }
       `}</style>

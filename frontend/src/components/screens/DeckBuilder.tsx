@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Shield, Plus, Minus, Zap, HeartPulse, Swords, Smartphone } from 'lucide-react';
 import cardDataRaw from '../../data.json';
-import { getCardBackground, StandardCard } from '../ui/Card';
+import { getCardBackground } from '../ui/Card';
 import { CardData } from '../../types';
 import { DeckManager } from './DeckManager';
 
@@ -224,9 +224,27 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           )}
         
         {selectedCard && (
-          <div className="modal-overlay" onClick={() => setSelectedCard(null)}>
-            <div className="modal-content" style={{maxWidth: '350px', transform: 'scale(1.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'transparent', border: 'none', boxShadow: 'none'}}>
-              <StandardCard card={selectedCard} />
+          <div className="card-preview-overlay" style={{ zIndex: 3000 }} onClick={() => setSelectedCard(null)}>
+            <div className="card-preview" style={{ background: getCardBackground(selectedCard.歌唱), cursor: 'default' }} onClick={e => e.stopPropagation()}>
+              <div className="card-cost" style={{top:'-12px', left:'-12px', width:'44px', height:'44px', fontSize:'1.4rem'}}>{selectedCard.コスト}</div>
+              <div className="card-title" style={{fontSize:'1.4rem'}}>{selectedCard.曲名}</div>
+              <div className="card-tags" style={{fontSize:'0.85rem'}}>
+                <span>{selectedCard.歌唱}</span>
+                <span>{selectedCard.センター}</span>
+              </div>
+              <div className="card-stats" style={{fontSize:'0.95rem', padding:'8px'}}>
+                {selectedCard.パワー && <span className="stat-item stat-power"><Swords size={16}/> {selectedCard.パワー}</span>}
+                {selectedCard.シールド && <span className="stat-item stat-shield"><Shield size={16}/> {selectedCard.シールド}</span>}
+                {selectedCard.ヒール && <span className="stat-item stat-heal"><HeartPulse size={16}/> {selectedCard.ヒール}</span>}
+                {selectedCard.ダメージ && <span className="stat-item stat-damage"><Zap size={16}/> {selectedCard.ダメージ}</span>}
+              </div>
+              <div className="card-effect" style={{fontSize:'1.15rem', padding:'12px'}}>
+                {selectedCard.効果1 && <div style={{marginBottom:'6px'}}>{selectedCard.効果1}</div>}
+                {selectedCard.効果2 && <div>{selectedCard.効果2}</div>}
+              </div>
+              <div style={{display:'flex', gap:'8px', marginTop:'10px'}}>
+                <button className="preview-close-btn" style={{ width: '100%' }} onClick={() => setSelectedCard(null)}>閉じる</button>
+              </div>
             </div>
           </div>
         )}

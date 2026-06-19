@@ -11,7 +11,7 @@ export function getCalculatedCost(card: ActiveCardData, userState: PlayerState):
   const combinedEffects = effect1 + '\n' + effect2;
 
   if (combinedEffects.includes('ターン中に使用したカードの枚数分小さくなる')) {
-    const cardsPlayed = userState.buffs.turnCardsPlayed.length;
+    const cardsPlayed = userState.buffs.turnCardsPlayed?.length || 0;
     cost -= cardsPlayed;
   }
 
@@ -211,7 +211,7 @@ export function applyCardEffects(state: GameState, card: ActiveCardData, isPlaye
     }
 
     if (effectText.includes("使用したカードの数だけ相手にダメージを与える")) {
-      const count = user.buffs.turnCardsPlayed.length;
+      const count = user.buffs.turnCardsPlayed?.length || 0;
       if (count > 0) {
         applyDamage(target, count, addEvent, 'kokon_tozai', isPlayer);
       }
@@ -364,8 +364,29 @@ export function applyCardEffects(state: GameState, card: ActiveCardData, isPlaye
       handleDraw(1);
     }
 
-    if (effectText.includes("をドローする") && !effectText.includes("ターン終了時") && !effectText.includes("最後に使用した時")) {
-      handleDraw(1);
+const drawTargetMatch = effectText.match(/「(.+?)」をドローする/);
+    let drawTargetName = drawTargetMatch ? drawTargetMatch[1] : null;
+
+    // 「同名カードをドローする」などの効果テキストへの対応
+    if (effectText.includes("同名カードを") || effectText.includes("同名のカードを")) {
+      drawTargetName = card.曲名;
+    }
+
+    if (drawTargetName && !effectText.includes("ターン終了時") && !effectText.includes("最後に使用した時")) {
+      // デッキ内に該当のカードが存在するか確認し、ある場合のみ引く
+      const targetIdx = user.deck.findIndex(c => c.曲名 && c.曲名.includes(drawTargetName!));
+      if (targetIdx !== -1) {
+        const [drawn] = user.deck.splice(targetIdx, 1);
+        if (user.hand.length >= 8) {
+          user.discard.push(drawn);
+          addEvent('overdraw', { card: drawn });
+        } else {
+          user.hand.push(drawn);
+          addEvent('draw', { count: 1 });
+        }
+      }
+    } else if (effectText.includes("をドローする") && !drawTargetName && !effectText.includes("ターン終了時") && !effectText.includes("最後に使用した時")) {
+      handleDraw(1); // カード名の指定がない通常のドロー
     }
 
     if (effectText.includes("手札をランダムに1枚捨てる") || effectText.includes("手札から1枚選び捨てる")) {
@@ -384,7 +405,7 @@ export function applyCardEffects(state: GameState, card: ActiveCardData, isPlaye
     
     const openingHealMatch = effectText.match(/このターンの最初に使用した(?:時|場合)、(\d+)ヒールする/);
     if (openingHealMatch) {
-      if (user.buffs.turnCardsPlayed.length === 1) { 
+      if (user.buffs.turnCardsPlayed?.length === 1) { 
         const healVal = parseInt(openingHealMatch[1], 10);
         user.hp = Math.min(user.maxHp, user.hp + healVal);
         addEvent('heal', { value: healVal, reason: 'opening' });

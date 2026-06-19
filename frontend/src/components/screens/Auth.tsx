@@ -1,4 +1,3 @@
-// src/components/screens/Auth.tsx
 import React, { useState } from 'react';
 import { loginWithEmail, signUpWithEmail, loginAsGuest } from '../../utils/firebase';
 
@@ -41,26 +40,25 @@ export const Auth: React.FC = () => {
   };
 
   return (
-    <div style={{ width: '100%', height: '100%', backgroundColor: 'var(--bg-dark, #111827)', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+    <div style={{ width: '100%', height: '100%', backgroundColor: 'var(--bg-dark, #111827)', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
       
-      {/* ★ ここから中身を80%に縮小して中央に寄せるラッパー */}
-      <div style={{ transformOrigin: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
         
-        <h1 style={{ fontSize: '3rem', marginBottom: '2rem', fontFamily: 'Outfit', color: 'var(--primary, #60a5fa)', textShadow: '0 0 10px rgba(96, 165, 250, 0.5)', textAlign: 'center' }}>
+        <h1 style={{ fontSize: 'min(3rem, 10vh)', marginBottom: 'min(2rem, 4vh)', fontFamily: 'Outfit', color: 'var(--primary, #60a5fa)', textShadow: '0 0 10px rgba(96, 165, 250, 0.5)', textAlign: 'center' }}>
           LINK LIKE BATTLE
         </h1>
         
-        <div style={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', padding: '2.5rem', borderRadius: '12px', width: '320px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.1)' }}>
-          <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', fontSize: '1.5rem' }}>{isSignUp ? '新規アカウント登録' : 'ログイン'}</h2>
+        <div style={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', padding: 'min(2.5rem, 4vh) min(2.5rem, 5vw)', borderRadius: '12px', width: 'min(320px, 85vw)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.1)', boxSizing: 'border-box' }}>
+          <h2 style={{ textAlign: 'center', marginBottom: 'min(1.5rem, 3vh)', fontSize: 'min(1.5rem, 6vh)', marginTop: 0 }}>{isSignUp ? '新規アカウント登録' : 'ログイン'}</h2>
           
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'min(1.25rem, 2vh)' }}>
             <input 
               type="email" 
               placeholder="メールアドレス" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
               required 
-              style={{ padding: '0.75rem', borderRadius: '6px', border: 'none', outline: 'none', backgroundColor: '#374151', color: 'white', fontSize: '1rem' }} 
+              style={{ padding: 'min(0.75rem, 2vh)', borderRadius: '6px', border: 'none', outline: 'none', backgroundColor: '#374151', color: 'white', fontSize: 'min(1rem, 4vh)' }} 
             />
             <input 
               type="password" 
@@ -69,43 +67,42 @@ export const Auth: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)} 
               required 
               minLength={6}
-              style={{ padding: '0.75rem', borderRadius: '6px', border: 'none', outline: 'none', backgroundColor: '#374151', color: 'white', fontSize: '1rem' }} 
+              style={{ padding: 'min(0.75rem, 2vh)', borderRadius: '6px', border: 'none', outline: 'none', backgroundColor: '#374151', color: 'white', fontSize: 'min(1rem, 4vh)' }} 
             />
             
-            {error && <p style={{ color: '#ef4444', fontSize: '0.875rem', margin: '0', textAlign: 'center' }}>{error}</p>}
+            {error && <p style={{ color: '#ef4444', fontSize: 'min(0.875rem, 3vh)', margin: '0', textAlign: 'center' }}>{error}</p>}
             
-            <button type="submit" disabled={loading} style={{ padding: '0.75rem', backgroundColor: 'var(--primary, #3b82f6)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', transition: 'background-color 0.2s' }}>
+            <button type="submit" disabled={loading} style={{ padding: 'min(0.75rem, 2vh)', backgroundColor: 'var(--primary, #3b82f6)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: 'min(1.1rem, 4.5vh)', transition: 'background-color 0.2s' }}>
               {loading ? '通信中...' : (isSignUp ? '登録してはじめる' : 'ログイン')}
             </button>
           </form>
 
-          <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+          <div style={{ marginTop: 'min(1rem, 2vh)', textAlign: 'center' }}>
             <button 
               type="button" 
               onClick={() => { setIsSignUp(!isSignUp); setError(''); }} 
-              style={{ background: 'none', border: 'none', color: '#9ca3af', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.9rem' }}
+              style={{ background: 'none', border: 'none', color: '#9ca3af', textDecoration: 'underline', cursor: 'pointer', fontSize: 'min(0.9rem, 3.5vh)' }}
             >
               {isSignUp ? 'すでにアカウントをお持ちの方はこちら' : '新しくアカウントを作る方はこちら'}
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', margin: '1.5rem 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', margin: 'min(1.5rem, 3vh) 0' }}>
             <div style={{ flex: 1, height: '1px', backgroundColor: '#4b5563' }}></div>
-            <span style={{ padding: '0 10px', color: '#9ca3af', fontSize: '0.875rem' }}>または</span>
+            <span style={{ padding: '0 10px', color: '#9ca3af', fontSize: 'min(0.875rem, 3vh)' }}>または</span>
             <div style={{ flex: 1, height: '1px', backgroundColor: '#4b5563' }}></div>
           </div>
 
           <button 
             onClick={handleGuest} 
             disabled={loading}
-            style={{ width: '100%', padding: '0.75rem', backgroundColor: 'transparent', color: 'white', border: '1px solid #6b7280', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', transition: 'background-color 0.2s' }}
+            style={{ width: '100%', padding: 'min(0.75rem, 2vh)', backgroundColor: 'transparent', color: 'white', border: '1px solid #6b7280', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: 'min(1rem, 4vh)', transition: 'background-color 0.2s' }}
           >
             ログインせずに遊ぶ (ゲスト)
           </button>
         </div>
         
       </div>
-      {/* ★ ラッパーここまで */}
     </div>
   );
 };
