@@ -19,6 +19,10 @@
 html, body {
   margin: 0;
   padding: 0;
+  width: 100dvw;
+  height: 100dvh;
+  /* Safariが画面外の要素につられて余白を作るのを絶対に防ぐ */
+  overflow: hidden;
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0; /* ★ widthを使わず四方を固定 */
   overflow: hidden;
@@ -31,6 +35,8 @@ html, body {
 }
 
 #root, .app-wrapper {
+  width: 100%;
+  height: 100%;
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
   overflow: hidden;
@@ -38,6 +44,8 @@ html, body {
 
 /* ★ バトル画面のコンテナ */
 .game-container {
+  width: 100%;
+  height: 100%;
   position: absolute; 
   top: 0; left: 0; right: 0; bottom: 0;
   display: flex;
