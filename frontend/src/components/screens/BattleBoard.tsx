@@ -57,7 +57,7 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
               style={{
                 position: 'absolute', 
                 top: 'max(1rem, env(safe-area-inset-top))', 
-                right: 'max(1.5rem, env(safe-area-inset-right))', 
+                right: 'max(1.0rem, env(safe-area-inset-right))', 
                 display: 'flex', alignItems: 'center', gap: '4px',
                 padding: '6px 14px', backgroundColor: '#ffffff', color: '#000000', fontSize: '0.85rem',
                 fontWeight: 'bold', borderRadius: '9999px', border: '1px solid #000000', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)',
@@ -112,7 +112,7 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
 
           <div style={{
             position: 'absolute',
-            right: 'max(1.5rem, env(safe-area-inset-right))',
+            right: 'max(1.0rem, env(safe-area-inset-right))',
             top: '30%', 
             display: 'flex',
             flexDirection: 'column',
@@ -134,7 +134,7 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
               display: 'flex', 
               flexDirection: 'column', 
               alignItems: 'center',
-              gap: '3.5vh',         
+              gap: '3.0vh',         
               pointerEvents: 'none',
               width: '100%' 
             }}>
@@ -162,9 +162,9 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
                   style={{ 
                     width: '100%', 
                     boxSizing: 'border-box', 
-                    fontSize: '0.95rem',     // ★ フォントサイズをさらに縮小
+                    fontSize: '0.9rem',     // ★ フォントサイズをさらに縮小
                     whiteSpace: 'nowrap',   // ★ 絶対に改行させない
-                    padding: '12px 0px',     // ★ 内側の余白を消して文字の場所を確保
+                    padding: '10px 0px',     // ★ 内側の余白を消して文字の場所を確保
                     letterSpacing: '0px' // ★ 文字同士を少し詰める
                   }}
                 >
