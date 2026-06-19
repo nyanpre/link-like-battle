@@ -24,7 +24,7 @@ export const PlayerStatus: React.FC<PlayerStatusProps> = ({ data, isEnemy, isSha
             {displayName}
           </span>
           {data.baseUnit && (
-            <span style={{ fontSize: '0.6rem', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+            <span style={{ fontSize: '0.65rem', color: '#4a4a4a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
               {data.baseUnit}
             </span>
           )}
@@ -36,7 +36,7 @@ export const PlayerStatus: React.FC<PlayerStatusProps> = ({ data, isEnemy, isSha
         <div className={`hp-bar ${data.hp <= 10 ? 'danger' : ''}`} style={{ width: `${Math.max(0, (data.hp / data.maxHp) * 100)}%` }}></div>
       </div>
 
-      <div className="deck-info" style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div className="deck-info" style={{ marginTop: '5px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
            <span className="deck-stat" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}><Layers size={14}/> {data.deck?.length || 0}</span>
            <span className="deck-stat" onClick={() => onDiscardClick(ownerStr)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}><Trash2 size={14}/> {data.discard?.length || 0}</span>

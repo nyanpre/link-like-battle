@@ -113,14 +113,15 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
           <div style={{
             position: 'absolute',
             right: 'max(1.0rem, env(safe-area-inset-right))',
-            top: '30%', 
+            //top: '27%',
+            bottom: '5%', 
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-end', 
             width: '13vw',          // ★ 全体の幅も少し絞る
             minWidth: '100px',       // ★ より細くなることを許可
             maxWidth: '120px',      
-            gap: '5.0vh', 
+            gap: '2.0vh', 
             zIndex: 100,
             pointerEvents: 'none'
           }}>
@@ -134,7 +135,7 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
               display: 'flex', 
               flexDirection: 'column', 
               alignItems: 'center',
-              gap: '3.0vh',         
+              gap: '1.5vh',         
               pointerEvents: 'none',
               width: '100%' 
             }}>
