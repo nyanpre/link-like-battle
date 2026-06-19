@@ -49,7 +49,8 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
       </div>
 
       <div className="game-container">
-        <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {/* ★ ここに overflow: 'hidden' を追加してSafariの右側余白バグを防止 */}
+        <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           
           {!gameState.battleResult && (
             <button
