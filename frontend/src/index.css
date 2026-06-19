@@ -12,7 +12,7 @@
   --text-muted: #555;
   /* スマホのノッチ（カメラ部分）を避けるためのセーフティゾーン変数 */
   --safe-left: max(2px, env(safe-area-inset-left));
-  --safe-right: max(7px, env(safe-area-inset-right));
+  --safe-right: max(3px, env(safe-area-inset-right));
 }
 
 /* 画面全体を固定し、アドレスバーによる見切れを完全に防ぐ */

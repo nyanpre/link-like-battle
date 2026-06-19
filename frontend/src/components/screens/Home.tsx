@@ -48,10 +48,10 @@ export const Home: React.FC<HomeProps> = ({
         />
         
         <div className="mode-buttons" style={{ display: 'flex', gap: 'min(1rem, 3vw)' }}>
-          <button className="title-start-btn" onClick={() => { setGameMode('cpu'); setScreen('deckBuilder'); }} style={{ padding: 'min(1rem, 3vh) min(2.5rem, 5vw)', fontSize: 'min(1.5rem, 5.5vh)' }}>
+          <button className="title-start-btn" onClick={() => { setGameMode('cpu'); setScreen('deckBuilder'); }} style={{ padding: 'min(1rem, 1.5vh) min(2.5rem, 3vw)', fontSize: 'min(1.5rem, 5.5vh)' }}>
             CPU戦で遊ぶ
           </button>
-          <button className="title-start-btn" style={{ background: 'var(--secondary)', padding: 'min(1rem, 3vh) min(2.5rem, 5vw)', fontSize: 'min(1.5rem, 5.5vh)' }} onClick={() => { setGameMode('online'); setScreen('deckBuilder'); }}>
+          <button className="title-start-btn" style={{ background: 'var(--secondary)', padding: 'min(1rem, 1.5vh) min(2.5rem, 3vw)', fontSize: 'min(1.5rem, 5.5vh)' }} onClick={() => { setGameMode('online'); setScreen('deckBuilder'); }}>
             通信対戦で遊ぶ
           </button>
         </div>

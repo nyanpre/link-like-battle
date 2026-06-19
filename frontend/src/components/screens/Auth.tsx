@@ -44,7 +44,7 @@ export const Auth: React.FC = () => {
       
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
         
-        <h1 style={{ fontSize: 'min(3rem, 10vh)', marginBottom: 'min(2rem, 4vh)', fontFamily: 'Outfit', color: 'var(--primary, #60a5fa)', textShadow: '0 0 10px rgba(96, 165, 250, 0.5)', textAlign: 'center' }}>
+        <h1 style={{ fontSize: 'min(2.5rem, 8vh)', marginBottom: 'min(1rem, 2vh)', fontFamily: 'Outfit', color: 'var(--primary, #60a5fa)', textShadow: '0 0 10px rgba(96, 165, 250, 0.5)', textAlign: 'center' }}>
           LINK LIKE BATTLE
         </h1>
         
@@ -81,13 +81,13 @@ export const Auth: React.FC = () => {
             <button 
               type="button" 
               onClick={() => { setIsSignUp(!isSignUp); setError(''); }} 
-              style={{ background: 'none', border: 'none', color: '#9ca3af', textDecoration: 'underline', cursor: 'pointer', fontSize: 'min(0.9rem, 3.5vh)' }}
+              style={{ background: 'none', border: 'none', color: '#e6e6e6', textDecoration: 'underline', cursor: 'pointer', fontSize: 'min(0.9rem, 3.5vh)' }}
             >
               {isSignUp ? 'すでにアカウントをお持ちの方はこちら' : '新しくアカウントを作る方はこちら'}
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', margin: 'min(1.5rem, 3vh) 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', margin: 'min(1.5rem, 1vh) 0' }}>
             <div style={{ flex: 1, height: '1px', backgroundColor: '#4b5563' }}></div>
             <span style={{ padding: '0 10px', color: '#9ca3af', fontSize: 'min(0.875rem, 3vh)' }}>または</span>
             <div style={{ flex: 1, height: '1px', backgroundColor: '#4b5563' }}></div>
