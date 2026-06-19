@@ -56,7 +56,7 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
               onClick={handleSurrender}
               style={{
                 position: 'absolute', 
-                top: 'max(1rem, env(safe-area-inset-top))', 
+                top: 'max(0.5rem, env(safe-area-inset-top))', 
                 right: 'max(1.0rem, env(safe-area-inset-right))', 
                 display: 'flex', alignItems: 'center', gap: '4px',
                 padding: '6px 14px', backgroundColor: '#ffffff', color: '#000000', fontSize: '0.85rem',
@@ -112,9 +112,9 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
 
           <div style={{
             position: 'absolute',
-            right: 'max(1.0rem, env(safe-area-inset-right))',
+            right: 'max(0.2rem, env(safe-area-inset-right))',
             //top: '27%',
-            bottom: '5%', 
+            bottom: '4%', 
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-end', 
