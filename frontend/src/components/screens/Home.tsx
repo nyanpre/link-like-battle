@@ -1,3 +1,4 @@
+// src/components/screens/Home.tsx
 import React from 'react';
 import { logoutFromGame } from '../../utils/firebase';
 import { User } from 'lucide-react';
@@ -18,15 +19,57 @@ export const Home: React.FC<HomeProps> = ({
   user
 }) => {
   return (
-    <div className="home-screen" style={{ justifyContent: 'center', padding: 0, overflow: 'hidden' }}>
+    <div className="home-screen" style={{ padding: 0, overflow: 'hidden', position: 'relative', width: '100%', height: '100%' }}>
       
       {/* 画面左上のユーザー情報 */}
-      <div style={{ position: 'absolute', top: 'max(2vh, env(safe-area-inset-top))', left: 'max(2vw, env(safe-area-inset-left))', color: '#9ca3af', fontSize: 'min(0.875rem, 3.5vh)', background: 'rgba(0,0,0,0.5)', padding: 'min(6px, 1.5vh) min(12px, 2vw)', borderRadius: '20px', border: '1px solid #374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{ position: 'absolute', top: 'max(2vh, env(safe-area-inset-top))', left: 'max(2vw, env(safe-area-inset-left))', color: '#9ca3af', fontSize: 'min(0.875rem, 3.5vh)', background: 'rgba(0,0,0,0.5)', padding: 'min(6px, 1.5vh) min(12px, 2vw)', borderRadius: '20px', border: '1px solid #374151', display: 'flex', alignItems: 'center', gap: '6px', zIndex: 10 }}>
         <User size={14} /> 
         {user?.isAnonymous ? 'ゲストとしてプレイ中' : user?.email}
       </div>
 
-      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'min(1.5rem, 3vh)', width: '100%' }}>
+      {/* 画面右上のログイン / アカウント切替ボタン */}
+      <button
+        onClick={async () => {
+          if (window.confirm('ログイン画面に戻りますか？\n（※ゲストで作成したデータから離れます）')) {
+            await logoutFromGame();
+          }
+        }}
+        style={{
+          position: 'absolute',
+          top: 'max(2vh, env(safe-area-inset-top))',
+          right: 'max(2vw, env(safe-area-inset-right))',
+          color: '#9ca3af',
+          fontSize: 'min(0.875rem, 3.5vh)',
+          background: 'rgba(0,0,0,0.5)',
+          padding: 'min(6px, 1.5vh) min(12px, 2vw)',
+          borderRadius: '20px',
+          border: '1px solid #374151',
+          display: 'flex',
+          alignItems: 'center',
+          cursor: 'pointer',
+          fontWeight: 'bold',
+          transition: 'all 0.2s',
+          zIndex: 10
+        }}
+        onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#ffffff'; }}
+        onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.5)'; e.currentTarget.style.color = '#9ca3af'; }}
+      >
+        ログイン / アカウント切替
+      </button>
+
+      {/* ★ 修正: タイトルからボタンまでの要素を、画面のど真ん中に絶対配置で固定する */}
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        gap: 'min(1.5rem, 3vh)', 
+        width: '100%',
+        zIndex: 5
+      }}>
         
         <div className="title-logo" style={{ textAlign: 'center', marginBottom: 0, lineHeight: '1.1' }}>
           <div>
@@ -56,29 +99,6 @@ export const Home: React.FC<HomeProps> = ({
           </button>
         </div>
 
-        <button
-          onClick={async () => {
-            if (window.confirm('ログイン画面に戻りますか？\n（※ゲストで作成したデータから離れます）')) {
-              await logoutFromGame();
-            }
-          }}
-          style={{
-            marginTop: 'min(0.5rem, 1vh)',
-            padding: 'min(8px, 1.5vh) min(24px, 4vw)', 
-            backgroundColor: 'transparent',
-            color: '#9ca3af', 
-            border: '1px solid #4b5563', 
-            borderRadius: '50px', 
-            cursor: 'pointer', 
-            fontSize: 'min(0.9rem, 3.5vh)',
-            fontWeight: 'bold',
-            transition: 'all 0.2s'
-          }}
-          onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#4b5563'; }}
-          onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#9ca3af'; }}
-        >
-          ログイン / アカウント切替
-        </button>
       </div>
       
     </div>
