@@ -1,7 +1,8 @@
 // src/components/screens/Home.tsx
-import React from 'react';
+import React, { useState } from 'react'; // ★ useStateを追加
 import { logoutFromGame } from '../../utils/firebase';
-import { User } from 'lucide-react';
+import { User, BookOpen } from 'lucide-react'; // ★ BookOpenアイコンを追加
+import { HowToPlayModal } from '../ui/HowToPlayModal'; // ★ 作成したモーダルをインポート
 
 interface HomeProps {
   playerName: string;
@@ -18,11 +19,17 @@ export const Home: React.FC<HomeProps> = ({
   setScreen,
   user
 }) => {
+  // ★ モーダルの開閉状態を管理するステート
+  const [showHowToPlay, setShowHowToPlay] = useState(false);
+
   return (
     <div className="home-screen" style={{ padding: 0, overflow: 'hidden', position: 'relative', width: '100%', height: '100%' }}>
       
+      {/* 遊び方モーダル */}
+      <HowToPlayModal isOpen={showHowToPlay} onClose={() => setShowHowToPlay(false)} />
+
       {/* 画面左上のユーザー情報 */}
-      <div style={{ position: 'absolute', top: 'max(2vh, env(safe-area-inset-top))', left: 'max(2vw, env(safe-area-inset-left))', color: '#9ca3af', fontSize: 'min(0.875rem, 3.5vh)', background: 'rgba(0,0,0,0.5)', padding: 'min(6px, 1.5vh) min(12px, 2vw)', borderRadius: '20px', border: '1px solid #374151', display: 'flex', alignItems: 'center', gap: '6px', zIndex: 10 }}>
+      <div style={{ position: 'absolute', top: 'max(2vh, env(safe-area-inset-top))', left: 'max(2vw, env(safe-area-inset-left))', color: '#ffffff', fontSize: 'min(0.875rem, 3.5vh)', background: 'rgba(0,0,0,0.5)', padding: 'min(6px, 1.5vh) min(12px, 2vw)', borderRadius: '20px', border: '1px solid #374151', display: 'flex', alignItems: 'center', gap: '6px', zIndex: 10 }}>
         <User size={14} /> 
         {user?.isAnonymous ? 'ゲストとしてプレイ中' : user?.email}
       </div>
@@ -38,7 +45,7 @@ export const Home: React.FC<HomeProps> = ({
           position: 'absolute',
           top: 'max(2vh, env(safe-area-inset-top))',
           right: 'max(2vw, env(safe-area-inset-right))',
-          color: '#9ca3af',
+          color: '#ffffff',
           fontSize: 'min(0.875rem, 3.5vh)',
           background: 'rgba(0,0,0,0.5)',
           padding: 'min(6px, 1.5vh) min(12px, 2vw)',
@@ -57,7 +64,7 @@ export const Home: React.FC<HomeProps> = ({
         ログイン / アカウント切替
       </button>
 
-      {/* ★ 修正: タイトルからボタンまでの要素を、画面のど真ん中に絶対配置で固定する */}
+      {/* 画面中央のメインコンテンツ */}
       <div style={{
         position: 'absolute',
         top: '50%',
@@ -98,6 +105,32 @@ export const Home: React.FC<HomeProps> = ({
             通信対戦で遊ぶ
           </button>
         </div>
+
+        {/* ★ 追加: 遊び方を見るボタン */}
+        <button
+          onClick={() => setShowHowToPlay(true)}
+          style={{
+            marginTop: 'min(0.5rem, 1vh)',
+            padding: 'min(10px, 1.8vh) min(32px, 4vw)', 
+            backgroundColor: 'rgba(4, 169, 181, 0.16)',
+            color: '#000000', 
+            border: '1px solid rgba(255, 255, 255, 0.3)', 
+            borderRadius: '50px', 
+            cursor: 'pointer', 
+            fontSize: 'min(1rem, 4vh)',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            backdropFilter: 'blur(4px)',
+            transition: 'all 0.2s',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}
+          onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+          onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+        >
+          <BookOpen size={18} /> 遊び方を見る
+        </button>
 
       </div>
       
