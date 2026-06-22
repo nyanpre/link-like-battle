@@ -10,7 +10,6 @@ interface HowToPlayModalProps {
 export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
-  // 全体的にサイズダウンし、ライトテーマに合わせたスタイル定義
   const sectionStyle: React.CSSProperties = { 
     marginBottom: '1.2rem', 
     backgroundColor: '#f8fafc', // 明るいグレー
