@@ -48,8 +48,8 @@ export const Auth: React.FC = () => {
           LINK LIKE BATTLE
         </h1>
         
-        <div style={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', padding: 'min(2.5rem, 4vh) min(2.5rem, 5vw)', borderRadius: '12px', width: 'min(320px, 85vw)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.1)', boxSizing: 'border-box' }}>
-          <h2 style={{ textAlign: 'center', marginBottom: 'min(1.5rem, 3vh)', fontSize: 'min(1.5rem, 6vh)', marginTop: 0 }}>{isSignUp ? '新規アカウント登録' : 'ログイン'}</h2>
+        <div style={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', padding: 'min(2.5rem, 3vh) min(2.5rem, 5vw)', borderRadius: '12px', width: 'min(320px, 85vw)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.1)', boxSizing: 'border-box' }}>
+          <h2 style={{ textAlign: 'center', marginBottom: 'min(1.5rem, 3vh)', fontSize: 'min(1.5rem, 4.5vh)', marginTop: -3 }}>{isSignUp ? '【新規アカウント登録】' : '【ログイン】'}</h2>
           
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'min(1.25rem, 2vh)' }}>
             <input 
