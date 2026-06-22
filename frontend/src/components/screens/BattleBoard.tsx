@@ -113,7 +113,7 @@ export const BattleBoard: React.FC<BattleBoardProps> = ({
 
           <div style={{
             position: 'absolute',
-            right: 'max(0.2rem, env(safe-area-inset-right))',
+            right: 'max(0.1rem)',
             //top: '27%',
             bottom: '4%', 
             display: 'flex',

@@ -57,7 +57,7 @@ html, body {
   padding-top: max(5px, env(safe-area-inset-top));
   padding-bottom: max(3px, env(safe-area-inset-bottom));
   padding-left: max(5px, env(safe-area-inset-left));
-  padding-right: max(5px, env(safe-area-inset-right));
+  padding-right: max(5px);
 }
 
 /* 盤面中央のカード置き場 */
