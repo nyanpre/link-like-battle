@@ -1,6 +1,6 @@
 // src/components/ui/HowToPlayModal.tsx
 import React from 'react';
-import { X, BookOpen, Layers, Swords, Monitor, Zap, CreditCard, Heart, Shield, Activity, Star, AlertCircle, ArrowRight } from 'lucide-react';
+import { X, BookOpen, Layers, Swords, Zap, Heart, Shield, Star } from 'lucide-react';
 
 interface HowToPlayModalProps {
   isOpen: boolean;
