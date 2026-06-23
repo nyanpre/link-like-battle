@@ -363,8 +363,8 @@ html, body {
 }
 
 .btn-special:disabled {
-  background: #4b5563;
-  color: #9ca3af;
+  background: #9ca3af;
+  color: #ffffff;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
@@ -461,7 +461,7 @@ html, body {
 
 .end-turn-btn {
   background: #000000;
-  border: 1px solid rgba(0,0,0,0.2);
+  border: 1px solid #9ca3af;
   color: #ffffff;
   padding: 1rem 2rem;
   border-radius: 8px;
@@ -474,7 +474,7 @@ html, body {
 
 .end-turn-btn:hover {
   background: #333333;
-  border-color: rgba(0,0,0,0.4);
+  border-color: #9ca3af;
 }
 
 .turn-banner {
@@ -1755,4 +1755,107 @@ html, body {
   cursor: pointer;
   display: flex;
   flex-direction: column;
+}
+
+/* ==========================================================================
+   フェーズ3: バトル演出・アニメーション
+   ========================================================================== */
+
+/* 1. ダメージや回復などのテキストエフェクト（以前のシンプルなスタイル） */
+.damage-text,
+.heal-text,
+.shield-text,
+.voltage-text,
+.draw-effect-text {
+  position: absolute;
+  font-size: 2rem;
+  font-weight: bold;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 1000;
+  animation: floatUp 1.2s ease-out forwards;
+}
+
+/* 個別の文字色（主張を抑えた元の色合い） */
+.damage-text { color: #ef4444; }
+.heal-text { color: #10b981; }
+.shield-text { color: #3b82f6; }
+.voltage-text { color: #f59e0b; }
+.draw-effect-text { color: #60a5fa; font-size: 1.8rem; }
+
+/* フワッと上に浮かんで消えるアニメーション */
+@keyframes floatUp {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-50px) scale(1.1); opacity: 0; }
+}
+
+
+/* 2. 画面の揺れエフェクト */
+.shake-animation {
+  animation: intense-shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes intense-shake {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  10%, 90% { transform: translate3d(-3px, -2px, 0) rotate(-1deg); }
+  20%, 80% { transform: translate3d(4px, 3px, 0) rotate(1deg); }
+  30%, 50%, 70% { transform: translate3d(-6px, -4px, 0) rotate(-2deg); }
+  40%, 60% { transform: translate3d(6px, 4px, 0) rotate(2deg); }
+}
+
+
+/* ==========================================================================
+   3. UI要素自体のフラッシュ（光る）エフェクト
+   ========================================================================== */
+
+/* ラッパー要素がレイアウトを崩さないように幅を100%に設定 */
+.status-effect-wrapper, 
+.voltage-effect-wrapper {
+  border-radius: 12px;
+  width: 100%; 
+}
+
+/* ダメージ時の赤い発光（拡大させず光るだけ） */
+.glow-damage {
+  animation: ui-flash-damage 0.8s ease-out;
+}
+@keyframes ui-flash-damage {
+  0% { box-shadow: 0 0 20px 8px rgba(239, 68, 68, 0.7); }
+  100% { box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* 回復時の緑の発光 */
+.glow-heal {
+  animation: ui-flash-heal 0.8s ease-out;
+}
+@keyframes ui-flash-heal {
+  0% { box-shadow: 0 0 20px 8px rgba(16, 185, 129, 0.7); }
+  100% { box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* シールド付与時の青い発光 */
+.glow-shield {
+  animation: ui-flash-shield 0.8s ease-out;
+}
+@keyframes ui-flash-shield {
+  0% { box-shadow: 0 0 20px 8px rgba(59, 130, 246, 0.7); }
+  100% { box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+/* ボルテージ獲得時の黄色い発光 */
+.glow-voltage {
+  animation: ui-flash-voltage 0.8s ease-out;
+}
+@keyframes ui-flash-voltage {
+  0% { box-shadow: 0 0 20px 8px rgba(245, 158, 11, 0.7); }
+  100% { box-shadow: 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+/* プレイされたカードが現れるエフェクト（控えめに） */
+.card-play-effect {
+  animation: card-play-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@keyframes card-play-pop {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; box-shadow: 0 0 15px 5px rgba(255,255,255,0.3); }
 }
