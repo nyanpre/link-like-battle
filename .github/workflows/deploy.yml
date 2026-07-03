@@ -35,4 +35,4 @@ jobs:
         with:
           folder: frontend/dist  # Viteのビルド成果物フォルダ
           branch: gh-pages       # デプロイ先のブランチ
-          clean: true            # 古いデプロイファイルを自動で掃除する
+          clean: true         
