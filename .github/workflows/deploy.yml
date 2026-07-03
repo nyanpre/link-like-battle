@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main ]
 
+# ★ 権限を修正
+# JamesIvesのデプロイアクションには contents: write が必須です。
+# Pages公式デプロイではないため pages: write や id-token: write は不要になります。
 permissions:
   contents: write
 
@@ -30,5 +33,6 @@ jobs:
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: frontend/dist
-          branch: gh-pages
+          folder: frontend/dist  # Viteのビルド成果物フォルダ
+          branch: gh-pages       # デプロイ先のブランチ
+          clean: true            # 古いデプロイファイルを自動で掃除する
