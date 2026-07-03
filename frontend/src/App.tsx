@@ -17,6 +17,12 @@ import { Battle } from './components/screens/Battle';
 // ★ ログイン画面のインポート
 import { Auth } from './components/screens/Auth';
 
+// ==========================================
+// ★ 追加：BGM関連のインポート
+// ==========================================
+import { BGMProvider } from './context/BGMContext';
+import { BGMController } from './components/ui/BGMController';
+
 // Firebaseの罠（空の配列を勝手に消す仕様）対策：データを安全な形に修復する関数
 const sanitizeGameState = (state: any): GameState => {
   if (!state) return state;
@@ -313,9 +319,17 @@ function App() {
   };
 
   return (
-    // ★ ここで全体の要素を .app-wrapper で囲み、80%縮小＋中央配置を適用します
+    // ★ 変更ポイント：全体のラッパーの内側に BGMProvider と BGMController を配置
+    // ログイン画面の時（!user）やローディング時はコントローラーを表示しないよう制御します
     <div className="app-wrapper">
-      {renderContent()}
+      {(!authLoading && user) ? (
+        <BGMProvider>
+          <BGMController />
+          {renderContent()}
+        </BGMProvider>
+      ) : (
+        renderContent()
+      )}
     </div>
   );
 }

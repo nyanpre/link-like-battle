@@ -135,14 +135,18 @@ export const useBattleLogic = ({
   const addDamageText = (x: number, y: number, text: string, color = '#ef4444', cssClass = 'damage-text') => {
     const id = Math.random();
     setDamageTexts(prev => [...prev, { id, x, y, text, color, cssClass }]);
-    setTimeout(() => { setDamageTexts(prev => prev.filter(dt => dt.id !== id)); }, 1200);
+    // ★ 修正1: 1200 から 1500 に変更（テキストが画面に留まる時間を長くする）
+    setTimeout(() => { setDamageTexts(prev => prev.filter(dt => dt.id !== id)); }, 1500); 
   };
 
   const addDrawEffect = (x: number, y: number, text: string) => { addDamageText(x, y, text, '#3b82f6', 'draw-effect-text'); };
 
-  const triggerShake = (target: string) => {
-    setGameState((prev: any) => ({ ...prev, animations: { ...prev.animations, [`${target}Shake`]: true } }));
-    setTimeout(() => { setGameState((prev: any) => ({ ...prev, animations: { ...prev.animations, [`${target}Shake`]: false } })); }, 500);
+  const triggerAnimation = (target: string, type: string) => {
+    const key = `${target}${type}`; // 例: "playerDamage", "enemyHeal"
+    setGameState((prev: any) => ({ ...prev, animations: { ...prev.animations, [key]: true } }));
+    setTimeout(() => { 
+      setGameState((prev: any) => ({ ...prev, animations: { ...prev.animations, [key]: false } })); 
+    }, 800); // 0.8秒で光を消す
   };
 
   const startTurn = (isPlayer: boolean) => {
@@ -393,7 +397,7 @@ export const useBattleLogic = ({
         
         let effectIndex = 0;
         events.forEach((ev: any) => {
-          const delay = effectIndex * 600;
+          const delay = effectIndex * 1000; 
           const offsetX = 30 + (effectIndex % 3) * 60; 
           const offsetY = (effectIndex % 3) * 40; 
           effectIndex++;
@@ -401,25 +405,30 @@ export const useBattleLogic = ({
             if (ev.type === 'damage') {
               const isTargetPlayer = ev.data.target === 'player';
               const baseY = isTargetPlayer ? window.innerHeight - 200 : 200;
-              addDamageText(offsetX, baseY - offsetY, `-${ev.data.value}`);
-              triggerShake(isTargetPlayer ? 'player' : 'enemy');
+              addDamageText(offsetX, baseY - offsetY, `-${ev.data.value}`, '#ef4444', 'damage-text');
+              triggerAnimation(isTargetPlayer ? 'player' : 'enemy', 'Shake');  // ★揺らす
+              triggerAnimation(isTargetPlayer ? 'player' : 'enemy', 'Damage'); // ★赤く光らせる
             }
             if (ev.type === 'damage_self') {
               const baseY = isPlayer ? window.innerHeight - 200 : 200;
-              addDamageText(offsetX, baseY - offsetY, `-${ev.data.value}`, '#ff6b35');
-              triggerShake(isPlayer ? 'player' : 'enemy');
+              addDamageText(offsetX, baseY - offsetY, `-${ev.data.value}`, '#ff6b35', 'damage-text');
+              triggerAnimation(isPlayer ? 'player' : 'enemy', 'Shake');  // ★揺らす
+              triggerAnimation(isPlayer ? 'player' : 'enemy', 'Damage'); // ★赤く光らせる
             }
             if (ev.type === 'heal') {
               const baseY = isPlayer ? window.innerHeight - 200 : 200;
-              addDamageText(offsetX, baseY - offsetY, `+${ev.data.value}`, '#10b981');
+              addDamageText(offsetX, baseY - offsetY, `+${ev.data.value}`, '#10b981', 'heal-text');
+              triggerAnimation(isPlayer ? 'player' : 'enemy', 'Heal'); // ★緑に光らせる
             }
             if (ev.type === 'voltage') {
               const baseY = isPlayer ? window.innerHeight - 200 : 200;
-              addDamageText(offsetX, baseY - offsetY, `+⚡${ev.data.value}`, '#f59e0b');
+              addDamageText(offsetX, baseY - offsetY, `+⚡${ev.data.value}`, '#f59e0b', 'voltage-text');
+              triggerAnimation(isPlayer ? 'player' : 'enemy', 'Voltage'); // ★黄色に光らせる
             }
             if (ev.type === 'shield') {
               const baseY = isPlayer ? window.innerHeight - 200 : 200;
-              addDamageText(offsetX, baseY - offsetY, `+🛡${ev.data.value}`, '#3b82f6');
+              addDamageText(offsetX, baseY - offsetY, `+🛡${ev.data.value}`, '#3b82f6', 'shield-text');
+              triggerAnimation(isPlayer ? 'player' : 'enemy', 'Shield'); // ★青く光らせる
             }
             if (ev.type === 'draw') {
               const baseY = isPlayer ? window.innerHeight / 2 : window.innerHeight / 2 - 60;
@@ -434,7 +443,8 @@ export const useBattleLogic = ({
           }, delay);
         });
 
-        const totalDelay = Math.max(effectIndex * 600, 1000);
+        // ★ 修正3: 効果全体が終わるまでの合計待機時間も 600 -> 1000 に変更
+        const totalDelay = Math.max(effectIndex * 1000, 1000); 
         const forceTurnEnd = newState.forceTurnEnd;
 
         setTimeout(() => {
