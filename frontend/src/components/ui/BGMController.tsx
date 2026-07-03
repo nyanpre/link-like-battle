@@ -254,11 +254,11 @@ export const BGMController: React.FC = () => {
               background: isPlaying ? '#3b82f6' : '#1f2937', 
               border: isPlaying ? '2px solid #60a5fa' : '2px solid #4b5563',
               color: '#fff', cursor: 'pointer', borderRadius: '50%',
-              width: '36px', height: '36px', display: 'flex', justifyContent: 'center', alignItems: 'center',
+              width: '24px', height: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center',
               boxShadow: '0 4px 12px rgba(0,0,0,0.5)', transition: 'all 0.2s ease-in-out'
             }}
           >
-            <Music size={22} color={isPlaying ? '#ffffff' : '#9ca3af'} />
+            <Music size={20} color={isPlaying ? '#ffffff' : '#ffffff'} />
           </button>
         )}
 
